@@ -1,0 +1,25 @@
+{
+  "name": "trantor",
+  "version-semver": "1.5.28",
+  "description": "Non-blocking cross-platform TCP networking without TLS for the private-LAN sSheila build",
+  "homepage": "https://github.com/an-tao/trantor",
+  "license": "BSD-2-Clause",
+  "dependencies": [
+    "c-ares",
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ],
+  "features": {
+    "spdlog": {
+      "description": "Enable spdlog support in trantor Logger",
+      "dependencies": ["spdlog"]
+    }
+  }
+}
+
