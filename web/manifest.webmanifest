@@ -1,0 +1,10 @@
+{
+  "name": "sSheila",
+  "short_name": "sSheila",
+  "description": "Your self-hosted cross-device utility",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#11130f",
+  "theme_color": "#11130f",
+  "icons": []
+}
