@@ -1,0 +1,13 @@
+/build/
+/data/
+/data-functional-test/
+/dist/
+/.tools/
+/.vs/
+/.vscode/
+*.db
+*.db-shm
+*.db-wal
+*.log
+.DS_Store
+Thumbs.db
