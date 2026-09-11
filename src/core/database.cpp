@@ -322,6 +322,19 @@ std::optional<ItemRecord> Database::get_item(std::string_view id) {
     return read_item(statement.get());
 }
 
+bool Database::delete_item(std::string_view id) {
+    std::lock_guard lock{mutex_};
+    Statement update{
+        handle_,
+        "UPDATE items SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP "
+        "WHERE id = ? AND deleted_at IS NULL;"};
+    bind_text(update.get(), 1, id);
+    if (sqlite3_step(update.get()) != SQLITE_DONE) {
+        throw std::runtime_error(sqlite3_errmsg(handle_));
+    }
+    return sqlite3_changes(handle_) > 0;
+}
+
 void Database::set_active(Database& database) {
     if (active_ != nullptr) {
         throw std::logic_error("The active sSheila database is already initialized");

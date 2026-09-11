@@ -48,6 +48,7 @@ public:
         std::string type = "file");
     [[nodiscard]] std::vector<ItemRecord> list_items(std::string_view query = {});
     [[nodiscard]] std::optional<ItemRecord> get_item(std::string_view id);
+    [[nodiscard]] bool delete_item(std::string_view id);
 
     static void set_active(Database& database);
     [[nodiscard]] static Database& active();
