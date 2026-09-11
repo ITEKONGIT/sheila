@@ -4,3 +4,19 @@
 .item-icon.type-video{background:#2e1a2e;color:#cc5eb8}
 .item-icon.type-audio{background:#1a1a2e;color:#5e8ecc}
 .item-icon.type-document{background:#2e2a1a;color:#ccb45e}
+.editor-tabs{display:flex;gap:4px;margin-top:26px;border-bottom:1px solid var(--line)}
+.editor-tab{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);padding:9px 13px 10px;cursor:pointer;font-size:.75rem;font-weight:650}
+.editor-tab:hover,.editor-tab.active{color:var(--acid)}
+.editor-tab.active{border-bottom-color:var(--acid)}
+.editor-toolbar{display:flex;gap:4px;padding:11px 0;border-bottom:1px solid var(--line)}
+.editor-toolbar button{min-width:31px;height:29px;border:1px solid transparent;border-radius:6px;background:transparent;color:#adb3a4;cursor:pointer;font-size:.75rem}
+.editor-toolbar button:hover{border-color:var(--line);background:#20231c;color:var(--acid)}
+.editor-surface{min-height:330px}
+#note-content{min-height:330px;margin:0}
+.note-preview{min-height:330px;padding:20px 0;color:#daddd4;line-height:1.65;overflow-wrap:anywhere}
+.note-preview h1,.note-preview h2,.note-preview h3{color:#fff;line-height:1.2;margin:0 0 15px;letter-spacing:-.025em}
+.note-preview h1{font-size:1.8rem}.note-preview h2{font-size:1.4rem}.note-preview h3{font-size:1.1rem}
+.note-preview p{margin:0 0 15px}.note-preview ul{padding-left:22px;margin:0 0 15px}.note-preview li{margin:5px 0}.note-preview blockquote{border-left:3px solid var(--acid);margin:0 0 15px;padding:4px 15px;color:#aeb5a3}.note-preview code{padding:2px 5px;border-radius:4px;background:#272b23;color:var(--acid);font: .85em ui-monospace,SFMono-Regular,Consolas,monospace}.note-preview hr{border:0;border-top:1px solid var(--line);margin:22px 0}
+.editor-status{display:flex;justify-content:space-between;gap:14px;border-top:1px solid var(--line);padding:11px 0;color:var(--muted);font-size:.68rem}
+.editor-status span:last-child{text-align:right;white-space:nowrap}
+.editor-toolbar button:focus-visible,.editor-tab:focus-visible{outline:2px solid var(--acid);outline-offset:2px}

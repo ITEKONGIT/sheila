@@ -11,6 +11,7 @@ Upload something from one device, retrieve it from another, or leave yourself a 
 - One self-contained Windows executable with the interface and runtime libraries embedded
 - Host-backed file upload and download
 - Persistent note creation and editing
+- Markdown document editor with preview, formatting shortcuts, local draft recovery, and word counts
 - Full-text search powered by SQLite FTS5
 - A universal inbox with file and note filters
 - WebSocket refresh when another device changes the workspace
@@ -180,7 +181,7 @@ sudo ./scripts/uninstall-linux-systemd.sh
 1. Authentication and device pairing
 2. Stable `ssheila.local` discovery
 3. Resumable and streamed large-file transfers
-4. Rich-text notes and revision history
+4. Rich-text collaboration and revision history
 5. Tags, folders, previews, and transfer history
 6. Native Windows Service and Linux systemd commands inside the executable (external service installers now available)
 7. Backup, recovery, and signed release artifacts

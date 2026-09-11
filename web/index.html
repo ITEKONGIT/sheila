@@ -30,10 +30,27 @@
 </div>
 <dialog id="note-dialog">
   <form id="note-form">
-    <div class="dialog-head"><div><p class="eyebrow">SHEILA NOTE</p><h2 id="note-dialog-title">New note</h2></div><button id="close-note" class="icon-button" type="button" aria-label="Close">×</button></div>
+    <div class="dialog-head"><div><p class="eyebrow">SHEILA DOC</p><h2 id="note-dialog-title">New document</h2></div><button id="close-note" class="icon-button" type="button" aria-label="Close">×</button></div>
     <input id="note-title" class="note-title" type="text" placeholder="Note title" maxlength="180">
-    <textarea id="note-content" placeholder="Start writing…" required></textarea>
-    <div class="dialog-actions"><span>Stored on this host</span><button class="button primary" type="submit">Save note</button></div>
+    <div class="editor-tabs" role="tablist" aria-label="Document view">
+      <button class="editor-tab active" type="button" data-editor-mode="write" role="tab" aria-selected="true">Write</button>
+      <button class="editor-tab" type="button" data-editor-mode="preview" role="tab" aria-selected="false">Preview</button>
+    </div>
+    <div class="editor-toolbar" role="toolbar" aria-label="Markdown formatting">
+      <button type="button" data-markup="bold" title="Bold (Ctrl/Cmd+B)"><strong>B</strong></button>
+      <button type="button" data-markup="italic" title="Italic (Ctrl/Cmd+I)"><em>I</em></button>
+      <button type="button" data-markup="heading" title="Heading">H</button>
+      <button type="button" data-markup="link" title="Link (Ctrl/Cmd+K)">↗</button>
+      <button type="button" data-markup="bullet" title="Bullet list">•</button>
+      <button type="button" data-markup="quote" title="Quote">❞</button>
+      <button type="button" data-markup="code" title="Inline code">&lt;/&gt;</button>
+    </div>
+    <div class="editor-surface">
+      <textarea id="note-content" placeholder="Start writing in Markdown…" required aria-label="Document content"></textarea>
+      <article id="note-preview" class="note-preview" hidden aria-label="Document preview"></article>
+    </div>
+    <div class="editor-status"><span id="editor-status">Drafts stay on this device until saved.</span><span id="word-count">0 words · 0 characters</span></div>
+    <div class="dialog-actions"><span>Stored on this host</span><button id="save-note" class="button primary" type="submit">Save document</button></div>
   </form>
 </dialog>
 <div id="toast" class="toast" role="status"></div><script src="/app.js" defer></script>
