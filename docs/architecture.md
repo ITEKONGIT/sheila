@@ -31,7 +31,7 @@ Embedded HTML/CSS/JavaScript
         + FTS5      objects
 ```
 
-The web resources are converted into byte arrays during CMake configuration and linked into the application. The Windows release statically links non-system dependencies, so the deployable runtime is one executable.
+The web resources are converted into byte arrays during CMake configuration and linked into the application. The Windows release statically links non-system dependencies, so the deployable runtime is one executable. Linux runs the same engine binary under `systemd` rather than introducing a second backend.
 
 ## Storage layout
 
@@ -64,8 +64,15 @@ Storage, database access, controllers, embedded resources, and orchestration are
 - network-interface discovery;
 - default data-directory selection;
 - Windows startup/firewall integration;
-- planned Windows Service and Linux systemd integration;
+- Windows startup integration and Linux systemd packaging;
+- planned native service-management commands inside the executable;
 - planned platform key storage.
+
+## Linux process model
+
+The Linux install uses a system-level `ssheila.service`, not a desktop startup entry or a process attached to a shell. systemd launches the engine as the unprivileged `ssheila` account, enables it at boot, and restarts it after failure.
+
+The unit declares `/var/lib/ssheila` as its writable state directory. The executable is installed separately at `/usr/local/bin/ssheila`, so replacing the program does not replace notes, file objects, or SQLite state. systemd hardening restricts filesystem writes, device access, elevated capabilities, and the address families available to the process.
 
 ## Transfer semantics
 
@@ -77,4 +84,3 @@ Transfers are currently host-mediated:
 4. Device B downloads the stored object.
 
 This is neither peer-to-peer transport nor bidirectional filesystem synchronization. Resumable upload sessions, transfer state, and source cleanup remain future milestones.
-

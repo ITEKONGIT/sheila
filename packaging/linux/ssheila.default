@@ -1,0 +1,5 @@
+# Optional overrides loaded by ssheila.service.
+# Keep the address at 0.0.0.0 to make sSheila reachable from the host subnet.
+SSHEILA_ADDRESS=0.0.0.0
+SSHEILA_PORT=18877
+SSHEILA_DATA_DIR=/var/lib/ssheila

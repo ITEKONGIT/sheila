@@ -47,3 +47,13 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build/ci --output-on-failure
+
+      - name: Validate Linux service packaging
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          bash -n scripts/build-linux.sh
+          bash -n scripts/install-linux-systemd.sh
+          bash -n scripts/uninstall-linux-systemd.sh
+          sudo install -m 0755 build/ci/ssheila /usr/local/bin/ssheila
+          systemd-analyze verify packaging/linux/ssheila.service

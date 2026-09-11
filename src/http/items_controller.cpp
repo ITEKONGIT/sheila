@@ -69,6 +69,23 @@ std::string safe_file_name(std::string_view original) {
     return name;
 }
 
+template <typename RequestPtr>
+drogon::HttpResponsePtr file_download_response(
+    const std::string& path, const std::string& title, const RequestPtr& request) {
+    if constexpr (requires {
+                      drogon::HttpResponse::newFileResponse(
+                          path, title, drogon::CT_NONE, "", request);
+                  }) {
+        return drogon::HttpResponse::newFileResponse(
+            path, title, drogon::CT_NONE, "", request);
+    } else {
+        // Drogon 1.9.0, shipped by current Debian/Parrot releases, predates
+        // request-aware range handling on this factory overload.
+        (void)request;
+        return drogon::HttpResponse::newFileResponse(path, title, drogon::CT_NONE, "");
+    }
+}
+
 }  // namespace
 
 void ItemsController::list(
@@ -202,8 +219,7 @@ void ItemsController::download(
             callback(error_response(drogon::k404NotFound, "file_not_found", "The file is unavailable"));
             return;
         }
-        callback(drogon::HttpResponse::newFileResponse(
-            item->objectPath->string(), item->title, drogon::CT_NONE, "", request));
+        callback(file_download_response(item->objectPath->string(), item->title, request));
     } catch (const std::exception& error) {
         callback(error_response(drogon::k500InternalServerError, "download_failed", error.what()));
     }

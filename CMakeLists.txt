@@ -55,6 +55,12 @@ if(SSHEILA_BUILD_SERVER)
     find_package(unofficial-sqlite3 CONFIG QUIET)
     if(TARGET unofficial::sqlite3::sqlite3)
         set(SSHEILA_SQLITE_TARGET unofficial::sqlite3::sqlite3)
+    elseif(TARGET SQLite::SQLite3)
+        set(SSHEILA_SQLITE_TARGET SQLite::SQLite3)
+    elseif(TARGET SQLite3_lib)
+        # Some distribution Drogon packages create this target while resolving
+        # their own SQLite dependency.
+        set(SSHEILA_SQLITE_TARGET SQLite3_lib)
     else()
         find_package(SQLite3 REQUIRED)
         if(TARGET SQLite::SQLite3)

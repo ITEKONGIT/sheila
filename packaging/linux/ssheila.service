@@ -1,0 +1,44 @@
+[Unit]
+Description=sSheila local-first files and notes workspace
+Documentation=https://github.com/ITEKONGIT/sheila
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ssheila
+Group=ssheila
+Environment=SSHEILA_ADDRESS=0.0.0.0
+Environment=SSHEILA_PORT=18877
+Environment=SSHEILA_DATA_DIR=/var/lib/ssheila
+EnvironmentFile=-/etc/default/ssheila
+ExecStart=/usr/local/bin/ssheila --address ${SSHEILA_ADDRESS} --port ${SSHEILA_PORT} --data-dir ${SSHEILA_DATA_DIR}
+Restart=on-failure
+RestartSec=3s
+TimeoutStopSec=30s
+
+# systemd creates and owns the durable workspace without placing data beside the binary.
+StateDirectory=ssheila
+StateDirectoryMode=0750
+WorkingDirectory=/var/lib/ssheila
+UMask=0027
+
+# The service may use the network and its state directory, but not the rest of the host.
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

@@ -18,6 +18,7 @@ Upload something from one device, retrieve it from another, or leave yourself a 
 - Resume from the same database and object store after restart
 - Host-subnet access enforcement before HTTP routing
 - Windows autostart and restart-after-failure tooling
+- Linux `systemd` service with boot startup, restart-on-failure, and process isolation
 - Shared C++ core designed to compile on Windows and Linux
 
 ## Local-first architecture
@@ -125,10 +126,40 @@ The Windows single-file build intentionally compiles Trantor without TLS because
 ## Build on Linux
 
 ```bash
-cmake --preset linux -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
-cmake --build --preset linux
-ctest --test-dir build/linux --output-on-failure
-./build/linux/ssheila
+sudo apt install cmake ninja-build g++ libdrogon-dev libjsoncpp-dev libsqlite3-dev \
+  libpq-dev default-libmysqlclient-dev libbrotli-dev libhiredis-dev libyaml-cpp-dev
+./scripts/build-linux.sh
+```
+
+The script configures the same C++20/Drogon engine, builds it, and runs the test suite. It uses distribution packages by default, or vcpkg when `VCPKG_ROOT` points to a bootstrapped checkout.
+
+## One-time Linux system service install
+
+On a systemd-based distribution, build sSheila and run the installer once:
+
+```bash
+./scripts/build-linux.sh
+sudo ./scripts/install-linux-systemd.sh
+```
+
+The installer copies the executable to `/usr/local/bin/ssheila`, creates an unprivileged `ssheila` system account, and starts `ssheila.service`. It also enables the service at boot and configures restart-on-failure, so no terminal or signed-in desktop session needs to remain open.
+
+Persistent files, notes, metadata, and the database live under `/var/lib/ssheila`. Runtime overrides can be placed in `/etc/default/ssheila`; re-running the installer upgrades the executable without overwriting those settings or the workspace.
+
+Useful service commands:
+
+```bash
+systemctl status ssheila
+journalctl -u ssheila -f
+sudo systemctl restart ssheila
+```
+
+After installation, browse to `http://<linux-host-ip>:18877` from a device on the same subnet. The application-level subnet gate remains active. Linux firewalls differ by distribution, so allow TCP port `18877` only from the local subnet when the host firewall is enabled.
+
+To remove the service and executable while preserving all data:
+
+```bash
+sudo ./scripts/uninstall-linux-systemd.sh
 ```
 
 ## API milestone
@@ -151,6 +182,5 @@ ctest --test-dir build/linux --output-on-failure
 3. Resumable and streamed large-file transfers
 4. Rich-text notes and revision history
 5. Tags, folders, previews, and transfer history
-6. Native Windows Service and Linux systemd commands inside the executable
+6. Native Windows Service and Linux systemd commands inside the executable (external service installers now available)
 7. Backup, recovery, and signed release artifacts
-
