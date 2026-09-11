@@ -88,7 +88,8 @@ std::string mime_for_file(const std::filesystem::path& path) {
     if (extension == ".pdf") return "application/pdf";
     if (extension == ".doc") return "application/msword";
     if (extension == ".docx") return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-    if (extension == ".xls" || extension == ".xlsx") return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    if (extension == ".xls") return "application/vnd.ms-excel";
+    if (extension == ".xlsx") return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     if (extension == ".ppt" || extension == ".pptx") return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
     if (extension == ".odt") return "application/vnd.oasis.opendocument.text";
     if (extension == ".ods") return "application/vnd.oasis.opendocument.spreadsheet";

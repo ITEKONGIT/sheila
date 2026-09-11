@@ -20,6 +20,31 @@ struct Options {
     std::filesystem::path dataRoot{ssheila::core::default_data_root()};
 };
 
+std::uint64_t max_body_size_bytes() {
+    constexpr std::uint64_t defaultMiB = 512;
+    constexpr std::uint64_t maximumMiB = 4096;
+    const auto* env = std::getenv("SSHEILA_MAX_BODY_SIZE_MB");
+    if (env == nullptr || *env == '\0') {
+        return defaultMiB * 1024ULL * 1024ULL;
+    }
+
+    try {
+        const std::string_view raw{env};
+        std::size_t consumed = 0;
+        const auto value = std::stoull(std::string{raw}, &consumed);
+        if (consumed == raw.size() && value > 0 && value <= maximumMiB) {
+            return value * 1024ULL * 1024ULL;
+        }
+    } catch (const std::exception&) {
+        // Fall through to the safe default. A bad environment override should
+        // not prevent the host service from starting.
+    }
+
+    std::cerr << "Ignoring invalid SSHEILA_MAX_BODY_SIZE_MB; using " << defaultMiB
+              << " MiB\n";
+    return defaultMiB * 1024ULL * 1024ULL;
+}
+
 Options parse_options(int argc, char* argv[]) {
     Options options;
     for (int index = 1; index < argc; ++index) {
@@ -82,18 +107,10 @@ int main(int argc, char* argv[]) {
         }
         std::cout << '\n' << std::flush;
 
-        std::uint64_t maxBodyMiB = 512;
-        if (const auto* env = std::getenv("SSHEILA_MAX_BODY_SIZE_MB")) {
-            const auto value = std::stoull(env);
-            if (value > 0) {
-                maxBodyMiB = value;
-            }
-        }
-
         drogon::app()
             .addListener(options.address, options.port)
             .setUploadPath(layout.uploads.string())
-            .setClientMaxBodySize(maxBodyMiB * 1024ULL * 1024ULL)
+            .setClientMaxBodySize(max_body_size_bytes())
             .setThreadNum(0);
 
         drogon::app().registerPreRoutingAdvice(
