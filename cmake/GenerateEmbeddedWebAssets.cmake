@@ -7,6 +7,7 @@ set(ASSETS
     "styles.css|text/css"
     "app.js|application/javascript"
     "manifest.webmanifest|application/manifest+json"
+    "favicon.svg|image/svg+xml"
 )
 
 file(WRITE "${OUTPUT_FILE}"
@@ -31,4 +32,5 @@ file(APPEND "${OUTPUT_FILE}" "}\n\n"
     "    if (path == \"/styles.css\") return EmbeddedWebAsset{{reinterpret_cast<const char*>(styles_css), sizeof(styles_css)}, styles_css_type};\n"
     "    if (path == \"/app.js\") return EmbeddedWebAsset{{reinterpret_cast<const char*>(app_js), sizeof(app_js)}, app_js_type};\n"
     "    if (path == \"/manifest.webmanifest\") return EmbeddedWebAsset{{reinterpret_cast<const char*>(manifest_webmanifest), sizeof(manifest_webmanifest)}, manifest_webmanifest_type};\n"
+    "    if (path == \"/favicon.svg\") return EmbeddedWebAsset{{reinterpret_cast<const char*>(favicon_svg), sizeof(favicon_svg)}, favicon_svg_type};\n"
     "    return std::nullopt;\n}\n\n}  // namespace ssheila::http\n")

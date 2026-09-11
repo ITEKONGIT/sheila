@@ -23,6 +23,22 @@ struct ItemRecord {
     std::string checksum;
     std::string createdAt;
     std::string updatedAt;
+    std::optional<std::string> deletedAt;
+};
+
+struct TaskRecord {
+    std::string id;
+    std::string title;
+    std::string details;
+    std::string status;
+    int priority{0};
+    std::optional<std::string> dueAt;
+    std::optional<std::string> reminderAt;
+    std::optional<std::string> remindedAt;
+    std::optional<std::string> linkedItemId;
+    std::string createdAt;
+    std::string updatedAt;
+    std::optional<std::string> deletedAt;
 };
 
 class Database {
@@ -48,6 +64,32 @@ public:
         std::string type = "file");
     [[nodiscard]] std::vector<ItemRecord> list_items(std::string_view query = {});
     [[nodiscard]] std::optional<ItemRecord> get_item(std::string_view id);
+    [[nodiscard]] std::vector<ItemRecord> list_deleted_items();
+    [[nodiscard]] bool trash_item(std::string_view id);
+    [[nodiscard]] bool restore_item(std::string_view id);
+    [[nodiscard]] std::optional<ItemRecord> purge_item(std::string_view id);
+
+    [[nodiscard]] TaskRecord create_task(
+        std::string title,
+        std::string details,
+        int priority,
+        std::optional<std::string> dueAt,
+        std::optional<std::string> reminderAt,
+        std::optional<std::string> linkedItemId);
+    [[nodiscard]] std::optional<TaskRecord> update_task(
+        std::string_view id,
+        std::string title,
+        std::string details,
+        int priority,
+        std::optional<std::string> dueAt,
+        std::optional<std::string> reminderAt,
+        std::optional<std::string> linkedItemId);
+    [[nodiscard]] std::vector<TaskRecord> list_tasks(bool includeDeleted = false);
+    [[nodiscard]] std::vector<TaskRecord> claim_due_tasks();
+    [[nodiscard]] bool complete_task(std::string_view id);
+    [[nodiscard]] bool trash_task(std::string_view id);
+    [[nodiscard]] bool restore_task(std::string_view id);
+    [[nodiscard]] bool purge_task(std::string_view id);
 
     static void set_active(Database& database);
     [[nodiscard]] static Database& active();

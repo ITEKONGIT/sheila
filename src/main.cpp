@@ -1,6 +1,7 @@
 #include "ssheila/core/database.hpp"
 #include "ssheila/core/local_subnet_access.hpp"
 #include "ssheila/core/storage_layout.hpp"
+#include "ssheila/http/events_websocket.hpp"
 
 #include <drogon/drogon.h>
 
@@ -129,6 +130,27 @@ int main(int argc, char* argv[]) {
                 response->setStatusCode(drogon::k403Forbidden);
                 reject(response);
             });
+
+        // Reminder delivery is deliberately pull-based: SQLite owns the
+        // schedule and this single timer claims a bounded batch. No task
+        // objects are retained between ticks, so memory use stays constant.
+        drogon::app().getLoop()->runEvery(15.0, [] {
+            try {
+                const auto dueTasks = ssheila::core::Database::active().claim_due_tasks();
+                for (const auto& task : dueTasks) {
+                    Json::Value event;
+                    event["type"] = "reminder.due";
+                    event["taskId"] = task.id;
+                    event["title"] = task.title;
+                    if (task.reminderAt) {
+                        event["reminderAt"] = *task.reminderAt;
+                    }
+                    ssheila::http::EventsWebSocket::publish(event.toStyledString());
+                }
+            } catch (const std::exception& error) {
+                std::cerr << "Reminder scheduler tick failed: " << error.what() << '\n';
+            }
+        });
 
         drogon::app().run();
     } catch (const std::exception& error) {

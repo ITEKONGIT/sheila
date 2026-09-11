@@ -38,6 +38,7 @@ if(SSHEILA_BUILD_SERVER)
         ${CMAKE_CURRENT_SOURCE_DIR}/web/styles.css
         ${CMAKE_CURRENT_SOURCE_DIR}/web/app.js
         ${CMAKE_CURRENT_SOURCE_DIR}/web/manifest.webmanifest
+        ${CMAKE_CURRENT_SOURCE_DIR}/web/favicon.svg
     )
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${SSHEILA_WEB_ASSETS})
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
@@ -79,6 +80,8 @@ if(SSHEILA_BUILD_SERVER)
         src/http/embedded_web_controller.cpp
         src/http/health_controller.cpp
         src/http/items_controller.cpp
+        src/http/tasks_controller.cpp
+        src/http/recycle_controller.cpp
         src/http/system_controller.cpp
         src/http/events_websocket.cpp
         ${SSHEILA_EMBEDDED_WEB_CPP}

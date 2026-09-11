@@ -29,6 +29,7 @@ Json::Value item_json(const ssheila::core::ItemRecord& item) {
     value["checksum"] = item.checksum;
     value["createdAt"] = item.createdAt;
     value["updatedAt"] = item.updatedAt;
+    value["deletedAt"] = item.deletedAt ? Json::Value{*item.deletedAt} : Json::Value{Json::nullValue};
     if (item.type == "file" || item.type == "image" || item.type == "video" ||
         item.type == "audio" || item.type == "document") {
         value["downloadUrl"] = "/api/v1/files/" + item.id;
@@ -307,6 +308,25 @@ void ItemsController::download(
         callback(file_download_response(item->objectPath->string(), item->title, request));
     } catch (const std::exception& error) {
         callback(error_response(drogon::k500InternalServerError, "download_failed", error.what()));
+    }
+}
+
+void ItemsController::trash(
+    const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+    std::string id) const {
+    try {
+        if (!ssheila::core::Database::active().trash_item(id)) {
+            callback(error_response(drogon::k404NotFound, "item_not_found", "The item does not exist"));
+            return;
+        }
+        auto response = drogon::HttpResponse::newHttpResponse();
+        response->setStatusCode(drogon::k204NoContent);
+        callback(response);
+        EventsWebSocket::publish(R"({"type":"items.changed"})");
+        EventsWebSocket::publish(R"({"type":"recycle.changed"})");
+    } catch (const std::exception& error) {
+        callback(error_response(drogon::k500InternalServerError, "item_trash_failed", error.what()));
     }
 }
 
