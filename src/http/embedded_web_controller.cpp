@@ -31,6 +31,12 @@ void EmbeddedWebController::manifest(
     send("/manifest.webmanifest", std::move(callback));
 }
 
+void EmbeddedWebController::favicon(
+    const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
+    send("/favicon.svg", std::move(callback));
+}
+
 void EmbeddedWebController::send(
     std::string_view path,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
@@ -47,4 +53,3 @@ void EmbeddedWebController::send(
 }
 
 }  // namespace ssheila::http
-

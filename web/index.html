@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0e100d"><title>sSheila</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -13,18 +14,22 @@
       <button class="nav-item active" data-filter="all"><span>Everything</span><b id="all-count">0</b></button>
       <button class="nav-item" data-filter="file"><span>Files</span><b id="file-count">0</b></button>
       <button class="nav-item" data-filter="note"><span>Notes</span><b id="note-count">0</b></button>
+      <button class="nav-item" data-filter="tasks"><span>Tasks</span><b id="task-count">0</b></button>
+      <button class="nav-item" data-filter="recycle"><span>Recycle bin</span><b id="recycle-count">0</b></button>
     </nav>
     <div class="sidebar-foot"><span id="connection" class="connection">Connecting</span><small>Private host network</small></div>
   </aside>
   <main>
     <header class="topbar">
       <label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search files and notes" autocomplete="off"></label>
-      <div class="actions"><span id="storage" class="storage">Checking storage…</span><button id="new-note" class="button secondary">New note</button><button id="send-file" class="button primary">Send file</button></div>
+      <div class="actions"><span id="storage" class="storage">Checking storage…</span><button id="new-task" class="button secondary">New task</button><button id="new-note" class="button secondary">New note</button><button id="send-file" class="button primary">Send file</button></div>
     </header>
     <section class="content">
       <div class="heading"><div><p class="eyebrow">UNIVERSAL INBOX</p><h1 id="view-title">Everything</h1><p id="view-description">Files and thoughts from every device, in one place.</p></div><span id="item-summary" class="item-summary">0 items</span></div>
       <label id="drop-zone" class="drop-zone"><input id="file-input" type="file" multiple hidden><span class="drop-icon">↑</span><span><strong>Drop files here</strong><small>or choose files from this device</small></span><span id="upload-progress" class="upload-progress"></span></label>
       <section id="items" class="items" aria-live="polite"><div class="loading">Loading your host…</div></section>
+      <section id="tasks-panel" class="panel" hidden aria-live="polite"></section>
+      <section id="recycle-panel" class="panel" hidden aria-live="polite"></section>
     </section>
   </main>
 </div>
@@ -51,6 +56,15 @@
     </div>
     <div class="editor-status"><span id="editor-status">Drafts stay on this device until saved.</span><span id="word-count">0 words · 0 characters</span></div>
     <div class="dialog-actions"><span>Stored on this host</span><button id="save-note" class="button primary" type="submit">Save document</button></div>
+  </form>
+</dialog>
+<dialog id="task-dialog">
+  <form id="task-form">
+    <div class="dialog-head"><div><p class="eyebrow">SHEILA TASKS</p><h2 id="task-dialog-title">New task</h2></div><button id="close-task" class="icon-button" type="button" aria-label="Close">×</button></div>
+    <input id="task-title" class="note-title" type="text" placeholder="Task title" maxlength="180" required>
+    <textarea id="task-details" class="task-details" placeholder="Details (optional)" maxlength="10000"></textarea>
+    <div class="task-fields"><label>Priority<select id="task-priority"><option value="0">Normal</option><option value="1">Soon</option><option value="2">High</option><option value="3">Urgent</option></select></label><label>Due<input id="task-due" type="datetime-local"></label><label>Remind me<input id="task-reminder" type="datetime-local"></label></div>
+    <div class="dialog-actions"><span>Stored on this host</span><button id="save-task" class="button primary" type="submit">Save task</button></div>
   </form>
 </dialog>
 <div id="toast" class="toast" role="status"></div><script src="/app.js" defer></script>

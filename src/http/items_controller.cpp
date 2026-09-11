@@ -29,6 +29,7 @@ Json::Value item_json(const ssheila::core::ItemRecord& item) {
     value["checksum"] = item.checksum;
     value["createdAt"] = item.createdAt;
     value["updatedAt"] = item.updatedAt;
+    value["deletedAt"] = item.deletedAt ? Json::Value{*item.deletedAt} : Json::Value{Json::nullValue};
     if (item.type == "file" || item.type == "image" || item.type == "video" ||
         item.type == "audio" || item.type == "document") {
         value["downloadUrl"] = "/api/v1/files/" + item.id;
@@ -310,25 +311,22 @@ void ItemsController::download(
     }
 }
 
-void ItemsController::removeItem(
+void ItemsController::trash(
     const drogon::HttpRequestPtr&,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback,
     std::string id) const {
     try {
-        if (id.empty()) {
-            callback(error_response(drogon::k400BadRequest, "invalid_id", "Item ID is required"));
+        if (!ssheila::core::Database::active().trash_item(id)) {
+            callback(error_response(drogon::k404NotFound, "item_not_found", "The item does not exist"));
             return;
         }
-        if (ssheila::core::Database::active().delete_item(id)) {
-            auto response = drogon::HttpResponse::newHttpJsonResponse(Json::Value{});
-            response->setStatusCode(drogon::k204NoContent);
-            callback(response);
-            EventsWebSocket::publish(R"({"type":"items.changed"})");
-        } else {
-            callback(error_response(drogon::k404NotFound, "item_not_found", "The item does not exist"));
-        }
+        auto response = drogon::HttpResponse::newHttpResponse();
+        response->setStatusCode(drogon::k204NoContent);
+        callback(response);
+        EventsWebSocket::publish(R"({"type":"items.changed"})");
+        EventsWebSocket::publish(R"({"type":"recycle.changed"})");
     } catch (const std::exception& error) {
-        callback(error_response(drogon::k500InternalServerError, "delete_failed", error.what()));
+        callback(error_response(drogon::k500InternalServerError, "item_trash_failed", error.what()));
     }
 }
 

@@ -43,9 +43,26 @@ void bind_text(sqlite3_stmt* statement, int index, std::string_view value) {
     }
 }
 
+void bind_optional_text(sqlite3_stmt* statement, int index, const std::optional<std::string>& value) {
+    if (value.has_value()) {
+        bind_text(statement, index, *value);
+        return;
+    }
+    if (sqlite3_bind_null(statement, index) != SQLITE_OK) {
+        throw std::runtime_error("Could not bind SQLite NULL value");
+    }
+}
+
 std::string column_text(sqlite3_stmt* statement, int index) {
     const auto* value = sqlite3_column_text(statement, index);
     return value == nullptr ? std::string{} : reinterpret_cast<const char*>(value);
+}
+
+std::optional<std::string> optional_column_text(sqlite3_stmt* statement, int index) {
+    if (sqlite3_column_type(statement, index) == SQLITE_NULL) {
+        return std::nullopt;
+    }
+    return column_text(statement, index);
 }
 
 ItemRecord read_item(sqlite3_stmt* statement) {
@@ -62,7 +79,25 @@ ItemRecord read_item(sqlite3_stmt* statement) {
     item.checksum = column_text(statement, 7);
     item.createdAt = column_text(statement, 8);
     item.updatedAt = column_text(statement, 9);
+    item.deletedAt = optional_column_text(statement, 10);
     return item;
+}
+
+TaskRecord read_task(sqlite3_stmt* statement) {
+    TaskRecord task;
+    task.id = column_text(statement, 0);
+    task.title = column_text(statement, 1);
+    task.details = column_text(statement, 2);
+    task.status = column_text(statement, 3);
+    task.priority = sqlite3_column_int(statement, 4);
+    task.dueAt = optional_column_text(statement, 5);
+    task.reminderAt = optional_column_text(statement, 6);
+    task.remindedAt = optional_column_text(statement, 7);
+    task.linkedItemId = optional_column_text(statement, 8);
+    task.createdAt = column_text(statement, 9);
+    task.updatedAt = column_text(statement, 10);
+    task.deletedAt = optional_column_text(statement, 11);
+    return task;
 }
 
 std::string new_id() {
@@ -95,7 +130,12 @@ std::string safe_fts_query(std::string_view query) {
 
 constexpr const char* itemColumns =
     "items.id, items.type, items.title, items.content, items.object_path, items.media_type, "
-    "COALESCE(items.byte_size, 0), COALESCE(items.checksum, ''), items.created_at, items.updated_at";
+    "COALESCE(items.byte_size, 0), COALESCE(items.checksum, ''), items.created_at, items.updated_at, items.deleted_at";
+
+constexpr const char* taskColumns =
+    "tasks.id, tasks.title, tasks.details, tasks.status, tasks.priority, tasks.due_at, "
+    "tasks.reminder_at, tasks.reminded_at, tasks.linked_item_id, tasks.created_at, "
+    "tasks.updated_at, tasks.deleted_at";
 
 }  // namespace
 
@@ -185,7 +225,25 @@ void Database::migrate() {
             tokenize='unicode61'
         );
 
+        CREATE TABLE IF NOT EXISTS tasks (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            details TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'completed')),
+            priority INTEGER NOT NULL DEFAULT 0 CHECK (priority BETWEEN 0 AND 3),
+            due_at TEXT,
+            reminder_at TEXT,
+            reminded_at TEXT,
+            linked_item_id TEXT REFERENCES items(id) ON DELETE SET NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            deleted_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS tasks_due_idx
+            ON tasks(reminder_at) WHERE deleted_at IS NULL AND reminded_at IS NULL;
+
         INSERT OR IGNORE INTO schema_migrations(version) VALUES (1);
+        INSERT OR IGNORE INTO schema_migrations(version) VALUES (2);
         COMMIT;
     )sql");
 }
@@ -322,17 +380,245 @@ std::optional<ItemRecord> Database::get_item(std::string_view id) {
     return read_item(statement.get());
 }
 
-bool Database::delete_item(std::string_view id) {
+std::vector<ItemRecord> Database::list_deleted_items() {
     std::lock_guard lock{mutex_};
-    Statement update{
-        handle_,
-        "UPDATE items SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP "
-        "WHERE id = ? AND deleted_at IS NULL;"};
-    bind_text(update.get(), 1, id);
-    if (sqlite3_step(update.get()) != SQLITE_DONE) {
+    const std::string sql = std::string{"SELECT "} + itemColumns +
+                            " FROM items WHERE deleted_at IS NOT NULL "
+                            "ORDER BY deleted_at DESC LIMIT 200;";
+    Statement statement{handle_, sql.c_str()};
+    std::vector<ItemRecord> items;
+    int result = SQLITE_ROW;
+    while ((result = sqlite3_step(statement.get())) == SQLITE_ROW) {
+        items.push_back(read_item(statement.get()));
+    }
+    if (result != SQLITE_DONE) {
         throw std::runtime_error(sqlite3_errmsg(handle_));
     }
-    return sqlite3_changes(handle_) > 0;
+    return items;
+}
+
+bool Database::trash_item(std::string_view id) {
+    std::lock_guard lock{mutex_};
+    Statement statement{handle_,
+                        "UPDATE items SET deleted_at = CURRENT_TIMESTAMP "
+                        "WHERE id = ? AND deleted_at IS NULL;"};
+    bind_text(statement.get(), 1, id);
+    if (sqlite3_step(statement.get()) != SQLITE_DONE) {
+        throw std::runtime_error(sqlite3_errmsg(handle_));
+    }
+    return sqlite3_changes(handle_) != 0;
+}
+
+bool Database::restore_item(std::string_view id) {
+    std::lock_guard lock{mutex_};
+    Statement statement{handle_, "UPDATE items SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL;"};
+    bind_text(statement.get(), 1, id);
+    if (sqlite3_step(statement.get()) != SQLITE_DONE) {
+        throw std::runtime_error(sqlite3_errmsg(handle_));
+    }
+    return sqlite3_changes(handle_) != 0;
+}
+
+std::optional<ItemRecord> Database::purge_item(std::string_view id) {
+    std::lock_guard lock{mutex_};
+    std::optional<ItemRecord> item;
+    {
+        const std::string sql = std::string{"SELECT "} + itemColumns +
+                                " FROM items WHERE id = ? AND deleted_at IS NOT NULL;";
+        Statement select{handle_, sql.c_str()};
+        bind_text(select.get(), 1, id);
+        if (sqlite3_step(select.get()) == SQLITE_ROW) {
+            item = read_item(select.get());
+        }
+    }
+    if (!item) {
+        return std::nullopt;
+    }
+
+    execute("BEGIN;");
+    try {
+        Statement index{handle_, "DELETE FROM item_search WHERE item_id = ?;"};
+        bind_text(index.get(), 1, id);
+        if (sqlite3_step(index.get()) != SQLITE_DONE) {
+            throw std::runtime_error(sqlite3_errmsg(handle_));
+        }
+        Statement remove{handle_, "DELETE FROM items WHERE id = ? AND deleted_at IS NOT NULL;"};
+        bind_text(remove.get(), 1, id);
+        if (sqlite3_step(remove.get()) != SQLITE_DONE) {
+            throw std::runtime_error(sqlite3_errmsg(handle_));
+        }
+        execute("COMMIT;");
+    } catch (...) {
+        execute("ROLLBACK;");
+        throw;
+    }
+    return item;
+}
+
+TaskRecord Database::create_task(
+    std::string title,
+    std::string details,
+    int priority,
+    std::optional<std::string> dueAt,
+    std::optional<std::string> reminderAt,
+    std::optional<std::string> linkedItemId) {
+    const auto id = new_id();
+    {
+        std::lock_guard lock{mutex_};
+        Statement insert{handle_,
+                         "INSERT INTO tasks(id, title, details, priority, due_at, reminder_at, linked_item_id) "
+                         "VALUES (?, ?, ?, ?, ?, ?, ?);"};
+        bind_text(insert.get(), 1, id);
+        bind_text(insert.get(), 2, title);
+        bind_text(insert.get(), 3, details);
+        if (sqlite3_bind_int(insert.get(), 4, priority) != SQLITE_OK) {
+            throw std::runtime_error("Could not bind task priority");
+        }
+        bind_optional_text(insert.get(), 5, dueAt);
+        bind_optional_text(insert.get(), 6, reminderAt);
+        bind_optional_text(insert.get(), 7, linkedItemId);
+        if (sqlite3_step(insert.get()) != SQLITE_DONE) {
+            throw std::runtime_error(sqlite3_errmsg(handle_));
+        }
+    }
+    std::lock_guard lock{mutex_};
+    const std::string sql = std::string{"SELECT "} + taskColumns + " FROM tasks WHERE id = ?;";
+    Statement select{handle_, sql.c_str()};
+    bind_text(select.get(), 1, id);
+    if (sqlite3_step(select.get()) != SQLITE_ROW) {
+        throw std::runtime_error("Could not read created task");
+    }
+    return read_task(select.get());
+}
+
+std::optional<TaskRecord> Database::update_task(
+    std::string_view id,
+    std::string title,
+    std::string details,
+    int priority,
+    std::optional<std::string> dueAt,
+    std::optional<std::string> reminderAt,
+    std::optional<std::string> linkedItemId) {
+    {
+        std::lock_guard lock{mutex_};
+        Statement update{handle_,
+                         "UPDATE tasks SET title = ?, details = ?, priority = ?, due_at = ?, "
+                         "reminder_at = ?, linked_item_id = ?, reminded_at = NULL, "
+                         "updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL;"};
+        bind_text(update.get(), 1, title);
+        bind_text(update.get(), 2, details);
+        if (sqlite3_bind_int(update.get(), 3, priority) != SQLITE_OK) {
+            throw std::runtime_error("Could not bind task priority");
+        }
+        bind_optional_text(update.get(), 4, dueAt);
+        bind_optional_text(update.get(), 5, reminderAt);
+        bind_optional_text(update.get(), 6, linkedItemId);
+        bind_text(update.get(), 7, id);
+        if (sqlite3_step(update.get()) != SQLITE_DONE) {
+            throw std::runtime_error(sqlite3_errmsg(handle_));
+        }
+        if (sqlite3_changes(handle_) == 0) {
+            return std::nullopt;
+        }
+    }
+    std::lock_guard lock{mutex_};
+    const std::string sql = std::string{"SELECT "} + taskColumns + " FROM tasks WHERE id = ?;";
+    Statement select{handle_, sql.c_str()};
+    bind_text(select.get(), 1, id);
+    if (sqlite3_step(select.get()) != SQLITE_ROW) {
+        return std::nullopt;
+    }
+    return read_task(select.get());
+}
+
+std::vector<TaskRecord> Database::list_tasks(bool includeDeleted) {
+    std::lock_guard lock{mutex_};
+    const std::string sql = std::string{"SELECT "} + taskColumns +
+        (includeDeleted ? " FROM tasks ORDER BY CASE WHEN status = 'completed' THEN 1 ELSE 0 END, "
+                           "COALESCE(due_at, '9999-12-31T23:59') LIMIT 200;"
+                        : " FROM tasks WHERE deleted_at IS NULL ORDER BY CASE WHEN status = 'completed' THEN 1 ELSE 0 END, "
+                          "COALESCE(due_at, '9999-12-31T23:59') LIMIT 200;");
+    Statement statement{handle_, sql.c_str()};
+    std::vector<TaskRecord> tasks;
+    int result = SQLITE_ROW;
+    while ((result = sqlite3_step(statement.get())) == SQLITE_ROW) {
+        tasks.push_back(read_task(statement.get()));
+    }
+    if (result != SQLITE_DONE) {
+        throw std::runtime_error(sqlite3_errmsg(handle_));
+    }
+    return tasks;
+}
+
+std::vector<TaskRecord> Database::claim_due_tasks() {
+    constexpr int maxBatch = 32;
+    std::lock_guard lock{mutex_};
+    const std::string sql = std::string{"SELECT "} + taskColumns +
+        " FROM tasks WHERE deleted_at IS NULL AND status != 'completed' AND reminded_at IS NULL "
+        "AND reminder_at IS NOT NULL AND datetime(reminder_at) <= CURRENT_TIMESTAMP "
+        "ORDER BY reminder_at LIMIT " + std::to_string(maxBatch) + ";";
+    Statement select{handle_, sql.c_str()};
+    std::vector<TaskRecord> due;
+    int result = SQLITE_ROW;
+    while ((result = sqlite3_step(select.get())) == SQLITE_ROW) {
+        due.push_back(read_task(select.get()));
+    }
+    if (result != SQLITE_DONE) {
+        throw std::runtime_error(sqlite3_errmsg(handle_));
+    }
+
+    for (const auto& task : due) {
+        Statement claim{handle_,
+                        "UPDATE tasks SET reminded_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP "
+                        "WHERE id = ? AND reminded_at IS NULL AND deleted_at IS NULL;"};
+        bind_text(claim.get(), 1, task.id);
+        if (sqlite3_step(claim.get()) != SQLITE_DONE) {
+            throw std::runtime_error(sqlite3_errmsg(handle_));
+        }
+    }
+    return due;
+}
+
+bool Database::complete_task(std::string_view id) {
+    std::lock_guard lock{mutex_};
+    Statement statement{handle_,
+                        "UPDATE tasks SET status = 'completed', reminded_at = NULL, "
+                        "updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL;"};
+    bind_text(statement.get(), 1, id);
+    if (sqlite3_step(statement.get()) != SQLITE_DONE) {
+        throw std::runtime_error(sqlite3_errmsg(handle_));
+    }
+    return sqlite3_changes(handle_) != 0;
+}
+
+bool Database::trash_task(std::string_view id) {
+    std::lock_guard lock{mutex_};
+    Statement statement{handle_, "UPDATE tasks SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL;"};
+    bind_text(statement.get(), 1, id);
+    if (sqlite3_step(statement.get()) != SQLITE_DONE) {
+        throw std::runtime_error(sqlite3_errmsg(handle_));
+    }
+    return sqlite3_changes(handle_) != 0;
+}
+
+bool Database::restore_task(std::string_view id) {
+    std::lock_guard lock{mutex_};
+    Statement statement{handle_, "UPDATE tasks SET deleted_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NOT NULL;"};
+    bind_text(statement.get(), 1, id);
+    if (sqlite3_step(statement.get()) != SQLITE_DONE) {
+        throw std::runtime_error(sqlite3_errmsg(handle_));
+    }
+    return sqlite3_changes(handle_) != 0;
+}
+
+bool Database::purge_task(std::string_view id) {
+    std::lock_guard lock{mutex_};
+    Statement statement{handle_, "DELETE FROM tasks WHERE id = ? AND deleted_at IS NOT NULL;"};
+    bind_text(statement.get(), 1, id);
+    if (sqlite3_step(statement.get()) != SQLITE_DONE) {
+        throw std::runtime_error(sqlite3_errmsg(handle_));
+    }
+    return sqlite3_changes(handle_) != 0;
 }
 
 void Database::set_active(Database& database) {
