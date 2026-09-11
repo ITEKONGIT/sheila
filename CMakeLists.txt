@@ -32,6 +32,24 @@ if(WIN32)
     target_link_libraries(ssheila_core PUBLIC iphlpapi ws2_32)
 endif()
 
+find_package(unofficial-sqlite3 CONFIG QUIET)
+if(TARGET unofficial::sqlite3::sqlite3)
+    set(SSHEILA_SQLITE_TARGET unofficial::sqlite3::sqlite3)
+elseif(TARGET SQLite::SQLite3)
+    set(SSHEILA_SQLITE_TARGET SQLite::SQLite3)
+elseif(TARGET SQLite3_lib)
+    set(SSHEILA_SQLITE_TARGET SQLite3_lib)
+else()
+    find_package(SQLite3 REQUIRED)
+    if(TARGET SQLite::SQLite3)
+        set(SSHEILA_SQLITE_TARGET SQLite::SQLite3)
+    elseif(TARGET SQLite3_lib)
+        set(SSHEILA_SQLITE_TARGET SQLite3_lib)
+    else()
+        message(FATAL_ERROR "SQLite was found, but no supported CMake target was exported")
+    endif()
+endif()
+
 if(SSHEILA_BUILD_SERVER)
     set(SSHEILA_WEB_ASSETS
         ${CMAKE_CURRENT_SOURCE_DIR}/web/index.html
@@ -52,27 +70,6 @@ if(SSHEILA_BUILD_SERVER)
     )
 
     find_package(Drogon CONFIG REQUIRED)
-
-    find_package(unofficial-sqlite3 CONFIG QUIET)
-    if(TARGET unofficial::sqlite3::sqlite3)
-        set(SSHEILA_SQLITE_TARGET unofficial::sqlite3::sqlite3)
-    elseif(TARGET SQLite::SQLite3)
-        set(SSHEILA_SQLITE_TARGET SQLite::SQLite3)
-    elseif(TARGET SQLite3_lib)
-        # Some distribution Drogon packages create this target while resolving
-        # their own SQLite dependency.
-        set(SSHEILA_SQLITE_TARGET SQLite3_lib)
-    else()
-        find_package(SQLite3 REQUIRED)
-        if(TARGET SQLite::SQLite3)
-            set(SSHEILA_SQLITE_TARGET SQLite::SQLite3)
-        elseif(TARGET SQLite3_lib)
-            # Drogon ships this target name in its FindSQLite3 module.
-            set(SSHEILA_SQLITE_TARGET SQLite3_lib)
-        else()
-            message(FATAL_ERROR "SQLite was found, but no supported CMake target was exported")
-        endif()
-    endif()
 
     add_executable(ssheila
         src/main.cpp
@@ -105,6 +102,8 @@ if(SSHEILA_BUILD_SERVER)
 endif()
 
 if(BUILD_TESTING)
+    find_package(Threads REQUIRED)
+
     add_executable(storage_layout_test tests/storage_layout_test.cpp)
     target_link_libraries(storage_layout_test PRIVATE ssheila_core)
     add_test(NAME storage_layout COMMAND storage_layout_test)
@@ -112,4 +111,10 @@ if(BUILD_TESTING)
     add_executable(local_subnet_access_test tests/local_subnet_access_test.cpp)
     target_link_libraries(local_subnet_access_test PRIVATE ssheila_core)
     add_test(NAME local_subnet_access COMMAND local_subnet_access_test)
+
+    add_executable(database_test tests/database_test.cpp src/core/database.cpp)
+    target_include_directories(database_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_link_libraries(database_test PRIVATE ${SSHEILA_SQLITE_TARGET} Threads::Threads)
+    target_compile_features(database_test PRIVATE cxx_std_20)
+    add_test(NAME database COMMAND database_test)
 endif()

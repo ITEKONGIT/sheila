@@ -1,4 +1,4 @@
-const state = {items: [], tasks: [], recycle: {items: [], tasks: []}, filter: "all", query: "", editingNoteId: null, editingTaskId: null, editorMode: "write", dirty: false};
+const state = {items: [], tasks: [], recycle: {items: [], tasks: []}, filter: "all", subfilter: "all", query: "", editingNoteId: null, editingTaskId: null, editorMode: "write", dirty: false};
 const el = {
   items: document.querySelector("#items"), search: document.querySelector("#search"),
   connection: document.querySelector("#connection"), storage: document.querySelector("#storage"),
@@ -9,12 +9,18 @@ const el = {
   notePreview: document.querySelector("#note-preview"), editorStatus: document.querySelector("#editor-status"),
   wordCount: document.querySelector("#word-count"), saveNote: document.querySelector("#save-note"),
   toast: document.querySelector("#toast"), tasksPanel: document.querySelector("#tasks-panel"), recyclePanel: document.querySelector("#recycle-panel"),
-  taskDialog: document.querySelector("#task-dialog"), taskForm: document.querySelector("#task-form"), taskTitle: document.querySelector("#task-title"), taskDetails: document.querySelector("#task-details"), taskPriority: document.querySelector("#task-priority"), taskDue: document.querySelector("#task-due"), taskReminder: document.querySelector("#task-reminder"), taskDialogTitle: document.querySelector("#task-dialog-title"), saveTask: document.querySelector("#save-task")
+  taskDialog: document.querySelector("#task-dialog"), taskForm: document.querySelector("#task-form"), taskTitle: document.querySelector("#task-title"), taskDetails: document.querySelector("#task-details"), taskPriority: document.querySelector("#task-priority"), taskDue: document.querySelector("#task-due"), taskReminder: document.querySelector("#task-reminder"), taskDialogTitle: document.querySelector("#task-dialog-title"), saveTask: document.querySelector("#save-task"),
+  subFilters: document.querySelector("#sub-filters"),
+  infoDialog: document.querySelector("#info-dialog"), infoTitle: document.querySelector("#info-title"),
+  infoType: document.querySelector("#info-type"), infoSize: document.querySelector("#info-size"),
+  infoMime: document.querySelector("#info-mime"), infoChecksum: document.querySelector("#info-checksum"),
+  infoCreated: document.querySelector("#info-created"), infoUpdated: document.querySelector("#info-updated"),
+  infoPreview: document.querySelector("#info-preview"), infoDownload: document.querySelector("#info-download")
 };
 
 function formatBytes(bytes) { const units = ["B", "KB", "MB", "GB", "TB"]; let value = Number(bytes || 0), unit = 0; while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; } return `${value.toFixed(unit < 2 ? 0 : 1)} ${units[unit]}`; }
 function formatDate(value) { if (!value) return "Now"; const normalized = value.includes("T") ? value : `${value.replace(" ", "T")}Z`; return new Intl.DateTimeFormat(undefined, {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}).format(new Date(normalized)); }
-function toast(message, isError = false) { el.toast.textContent = message; el.toast.classList.toggle("error", isError); el.toast.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => el.toast.classList.remove("show"), 2800); }
+function toast(message, isError = false) { el.toast.innerHTML = ""; const text = document.createTextNode(message); el.toast.appendChild(text); el.toast.classList.toggle("error", isError); el.toast.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => el.toast.classList.remove("show"), 2800); }
 async function api(url, options = {}) { const response = await fetch(url, options); const payload = await response.json().catch(() => ({})); if (!response.ok) throw new Error(payload.message || `Request failed (${response.status})`); return payload; }
 
 function icon(item) {
@@ -24,7 +30,15 @@ function icon(item) {
   const extension = item.title.split(".").pop();
   return extension && extension !== item.title ? extension.slice(0, 4) : "FILE";
 }
-function visibleItems() { return state.items.filter(item => { if (state.filter === "all") return true; if (state.filter === "note") return item.type === "note"; return item.type !== "note"; }); }
+
+function visibleItems() {
+  return state.items.filter(item => {
+    if (state.filter === "note") return item.type === "note";
+    if (state.subfilter !== "all") return item.type === state.subfilter;
+    if (state.filter === "all") return true;
+    return item.type !== "note";
+  });
+}
 
 function render() {
   const items = visibleItems(), notes = state.items.filter(item => item.type === "note").length, files = state.items.filter(item => item.type !== "note").length;
@@ -33,7 +47,11 @@ function render() {
   if (!items.length) { const empty = document.createElement("div"), title = document.createElement("strong"), detail = document.createElement("span"); empty.className = "empty"; title.textContent = state.query ? "Nothing matched that search" : "This space is ready"; detail.textContent = state.query ? "Try another word or clear the search." : "Send a file or write your first note."; empty.append(title, detail); el.items.append(empty); return; }
   for (const item of items) {
     const row = document.createElement("article"), badge = document.createElement("span"), body = document.createElement("span"), title = document.createElement("span"), preview = document.createElement("span"), meta = document.createElement("span"), del = document.createElement("button");
-    row.className = "item"; row.dataset.id = item.id; row.tabIndex = 0; badge.className = "item-icon"; if (["image", "video", "audio", "document"].includes(item.type)) badge.classList.add(`type-${item.type}`); badge.textContent = icon(item); title.className = "item-title"; title.textContent = item.title; preview.className = "item-preview"; preview.textContent = item.type === "note" ? (item.content || "Empty note") : `${item.mediaType || "File"} · ${formatBytes(item.byteSize)}`; body.append(title, preview); meta.className = "item-meta"; meta.textContent = `${formatDate(item.updatedAt)}\n${item.type === "note" ? "Open note" : "Download"}`; meta.style.whiteSpace = "pre-line"; del.type = "button"; del.className = "item-delete"; del.textContent = "\u00d7"; del.dataset.deleteId = item.id; del.setAttribute("aria-label", "Delete"); row.append(badge, body, meta, del); el.items.append(row);
+    row.className = "item"; row.dataset.id = item.id; row.tabIndex = 0; badge.className = "item-icon"; if (["image", "video", "audio", "document"].includes(item.type)) badge.classList.add(`type-${item.type}`); badge.textContent = icon(item); title.className = "item-title"; title.textContent = item.title; preview.className = "item-preview"; preview.textContent = item.type === "note" ? (item.content || "Empty note") : `${item.mediaType || "File"} · ${formatBytes(item.byteSize)}`; body.append(title, preview); meta.className = "item-meta"; meta.textContent = `${formatDate(item.updatedAt)}\n${item.type === "note" ? "Open note" : "Download"}`; meta.style.whiteSpace = "pre-line"; del.type = "button"; del.className = "item-delete"; del.textContent = "\u00d7"; del.dataset.deleteId = item.id; del.setAttribute("aria-label", "Delete"); row.append(badge, body, meta, del);
+    if (item.type === "video" && item.downloadUrl) { const vid = document.createElement("video"); vid.className = "item-media"; vid.src = item.downloadUrl; vid.controls = true; vid.preload = "metadata"; vid.playsInline = true; body.append(vid); }
+    if (item.type === "audio" && item.downloadUrl) { const aud = document.createElement("audio"); aud.className = "item-media"; aud.src = item.downloadUrl; aud.controls = true; aud.preload = "metadata"; body.append(aud); }
+    if (item.type === "image" && item.downloadUrl) { const img = document.createElement("img"); img.className = "item-media"; img.src = item.downloadUrl; img.alt = item.title; img.loading = "lazy"; body.append(img); }
+    el.items.append(row);
   }
 }
 
@@ -94,21 +112,62 @@ function openNote(item = null) {
   setEditorMode("write"); updateEditorStatus(); el.dialog.showModal(); setTimeout(() => item ? el.noteContent.focus() : el.noteTitle.focus(), 0);
 }
 
+function openInfo(item) {
+  el.infoTitle.textContent = item.title;
+  el.infoType.textContent = item.type;
+  el.infoSize.textContent = formatBytes(item.byteSize);
+  el.infoMime.textContent = item.mediaType || "—";
+  el.infoChecksum.textContent = item.checksum || "—";
+  el.infoCreated.textContent = formatDate(item.createdAt);
+  el.infoUpdated.textContent = formatDate(item.updatedAt);
+  el.infoPreview.innerHTML = "";
+  if (item.type === "video" && item.downloadUrl) { const vid = document.createElement("video"); vid.src = item.downloadUrl; vid.controls = true; vid.preload = "metadata"; vid.playsInline = true; vid.className = "info-media"; el.infoPreview.append(vid); }
+  else if (item.type === "audio" && item.downloadUrl) { const aud = document.createElement("audio"); aud.src = item.downloadUrl; aud.controls = true; aud.preload = "metadata"; aud.className = "info-media"; el.infoPreview.append(aud); }
+  else if (item.type === "image" && item.downloadUrl) { const img = document.createElement("img"); img.src = item.downloadUrl; img.alt = item.title; img.className = "info-media"; el.infoPreview.append(img); }
+  el.infoDownload.href = item.downloadUrl || "#";
+  el.infoDownload.style.display = item.downloadUrl ? "" : "none";
+  el.infoDialog.showModal();
+}
+
 function uploadOne(file) { return new Promise((resolve, reject) => { const form = new FormData(), xhr = new XMLHttpRequest(); form.append("file", file); xhr.open("POST", "/api/v1/files"); xhr.upload.addEventListener("progress", event => { if (event.lengthComputable) el.progress.textContent = `${file.name} · ${Math.round(event.loaded / event.total * 100)}%`; }); xhr.addEventListener("load", () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status})`))); xhr.addEventListener("error", () => reject(new Error("The upload connection failed"))); xhr.send(form); }); }
 async function uploadFiles(files) { const list = [...files]; if (!list.length) return; try { for (const file of list) await uploadOne(file); toast(`${list.length} file${list.length === 1 ? "" : "s"} stored on the host`); await loadItems(); } catch (error) { toast(error.message, true); } finally { el.progress.textContent = ""; el.fileInput.value = ""; } }
-async function deleteItem(id) { if (!confirm("Move this item to the recycle bin?")) return; try { await api(`/api/v1/items/${id}`, {method: "DELETE"}); toast("Moved to recycle bin"); await Promise.all([loadItems(), loadRecycle()]); } catch (error) { toast(error.message, true); } }
 
 function insertMarkup(kind) {
   const ranges = {bold: ["**", "**", "bold text"], italic: ["*", "*", "italic text"], heading: ["### ", "", "heading"], link: ["[", "](https://)", "link text"], bullet: ["- ", "", "list item"], quote: ["> ", "", "quote"], code: ["`", "`", "code"]}; const range = ranges[kind]; if (!range) return; const start = el.noteContent.selectionStart, end = el.noteContent.selectionEnd, selected = el.noteContent.value.slice(start, end) || range[2]; el.noteContent.setRangeText(`${range[0]}${selected}${range[1]}`, start, end, "select"); el.noteContent.dispatchEvent(new Event("input", {bubbles: true})); el.noteContent.focus(); }
 
-document.querySelector("#send-file").addEventListener("click", () => el.fileInput.click()); document.querySelector("#new-note").addEventListener("click", () => openNote()); document.querySelector("#new-task").addEventListener("click", () => openTask()); document.querySelector("#close-note").addEventListener("click", () => { if (!state.dirty || window.confirm("Discard unsaved changes?")) el.dialog.close(); }); document.querySelector("#close-task").addEventListener("click", () => el.taskDialog.close()); el.taskForm.addEventListener("submit", saveTask); el.fileInput.addEventListener("change", () => uploadFiles(el.fileInput.files));
+document.querySelector("#send-file").addEventListener("click", () => el.fileInput.click()); document.querySelector("#new-note").addEventListener("click", () => openNote()); document.querySelector("#new-task").addEventListener("click", () => openTask()); document.querySelector("#close-note").addEventListener("click", () => { if (!state.dirty || window.confirm("Discard unsaved changes?")) el.dialog.close(); }); document.querySelector("#close-task").addEventListener("click", () => el.taskDialog.close()); document.querySelector("#close-info").addEventListener("click", () => el.infoDialog.close()); el.taskForm.addEventListener("submit", saveTask); el.fileInput.addEventListener("change", () => uploadFiles(el.fileInput.files));
 el.dropZone.addEventListener("dragover", event => { event.preventDefault(); el.dropZone.classList.add("dragging"); }); el.dropZone.addEventListener("dragleave", () => el.dropZone.classList.remove("dragging")); el.dropZone.addEventListener("drop", event => { event.preventDefault(); el.dropZone.classList.remove("dragging"); uploadFiles(event.dataTransfer.files); });
 document.addEventListener("paste", event => { const items = event.clipboardData?.items; if (!items) return; const files = []; for (const item of items) { if (item.kind === "file") { const file = item.getAsFile(); if (file) files.push(file); } } if (files.length) uploadFiles(files); });
-el.items.addEventListener("click", event => { const del = event.target.closest(".item-delete"); if (del) { event.stopPropagation(); deleteItem(del.dataset.deleteId); return; } const row = event.target.closest(".item"); if (!row) return; const item = state.items.find(candidate => candidate.id === row.dataset.id); if (!item) return; if (item.type === "note") openNote(item); else window.location.assign(item.downloadUrl); });
+el.items.addEventListener("click", event => {
+  const del = event.target.closest(".item-delete"); if (del) { event.stopPropagation(); trashItem(del.dataset.deleteId); return; }
+  const row = event.target.closest(".item"); if (!row) return;
+  const item = state.items.find(candidate => candidate.id === row.dataset.id); if (!item) return;
+  if (item.type === "note") openNote(item);
+  else if (event.target.closest(".item-media")) openInfo(item);
+  else if (item.downloadUrl) window.location.assign(item.downloadUrl);
+});
 el.noteForm.addEventListener("submit", async event => { event.preventDefault(); if (!el.noteContent.value.trim()) { toast("Write something before saving", true); el.noteContent.focus(); return; } const payload = JSON.stringify({title: el.noteTitle.value.trim(), content: el.noteContent.value}), url = state.editingNoteId ? `/api/v1/notes/${state.editingNoteId}` : "/api/v1/notes"; el.saveNote.disabled = true; el.saveNote.textContent = "Saving…"; try { await api(url, {method: state.editingNoteId ? "PUT" : "POST", headers: {"Content-Type": "application/json"}, body: payload}); clearDraft(); state.dirty = false; el.dialog.close(); toast(state.editingNoteId ? "Document updated" : "Document created"); await loadItems(); } catch (error) { toast(error.message, true); } finally { el.saveNote.disabled = false; el.saveNote.textContent = "Save document"; } });
 el.noteTitle.addEventListener("input", () => { state.dirty = true; updateEditorStatus(); saveDraft(); }); el.noteContent.addEventListener("input", () => { state.dirty = true; updateEditorStatus(); saveDraft(); }); document.querySelectorAll("[data-markup]").forEach(button => button.addEventListener("click", () => insertMarkup(button.dataset.markup))); document.querySelectorAll("[data-editor-mode]").forEach(tab => tab.addEventListener("click", () => setEditorMode(tab.dataset.editorMode)));
 el.noteForm.addEventListener("keydown", event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); el.noteForm.requestSubmit(); } if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") { event.preventDefault(); insertMarkup("bold"); } if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "i") { event.preventDefault(); insertMarkup("italic"); } if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); insertMarkup("link"); } }); el.dialog.addEventListener("cancel", event => { if (state.dirty && !window.confirm("Discard unsaved changes?")) event.preventDefault(); });
-let searchTimer; el.search.addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.query = el.search.value.trim(); loadItems(); }, 220); }); document.querySelectorAll(".nav-item").forEach(button => button.addEventListener("click", () => { document.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active")); button.classList.add("active"); state.filter = button.dataset.filter; const labels = {all: ["Everything", "Files and thoughts from every device, in one place."], file: ["Files", "Media and documents stored by the host."], note: ["Notes", "Thoughts that follow you across devices."], tasks: ["Tasks", "Small promises Sheila keeps on schedule."], recycle: ["Recycle bin", "Restore or permanently remove deleted items."]}; document.querySelector("#view-title").textContent = labels[state.filter][0]; document.querySelector("#view-description").textContent = labels[state.filter][1]; const itemView = !["tasks", "recycle"].includes(state.filter); el.items.hidden = !itemView; el.dropZone.hidden = !itemView; el.tasksPanel.hidden = state.filter !== "tasks"; el.recyclePanel.hidden = state.filter !== "recycle"; if (state.filter === "tasks") loadTasks(); else if (state.filter === "recycle") loadRecycle(); else render(); }));
+
+let searchTimer; el.search.addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.query = el.search.value.trim(); loadItems(); }, 220); });
+document.querySelectorAll(".nav-item").forEach(button => button.addEventListener("click", () => {
+  document.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active")); button.classList.add("active");
+  state.filter = button.dataset.filter;
+  const labels = {all: ["Everything", "Files and thoughts from every device, in one place."], file: ["Files", "Media and documents stored by the host."], note: ["Notes", "Thoughts that follow you across devices."], tasks: ["Tasks", "Small promises Sheila keeps on schedule."], recycle: ["Recycle bin", "Restore or permanently remove deleted items."]};
+  document.querySelector("#view-title").textContent = labels[state.filter][0]; document.querySelector("#view-description").textContent = labels[state.filter][1];
+  const itemView = !["tasks", "recycle"].includes(state.filter); el.items.hidden = !itemView; el.dropZone.hidden = !itemView; el.tasksPanel.hidden = state.filter !== "tasks"; el.recyclePanel.hidden = state.filter !== "recycle";
+  if (state.filter === "tasks") loadTasks(); else if (state.filter === "recycle") loadRecycle(); else render();
+}));
+document.querySelectorAll(".sub-filter").forEach(button => button.addEventListener("click", () => {
+  document.querySelectorAll(".sub-filter").forEach(s => s.classList.remove("active")); button.classList.add("active");
+  state.subfilter = button.dataset.subfilter; render();
+}));
+
+document.addEventListener("keydown", event => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "n") { event.preventDefault(); openNote(); }
+  if (event.key === "Escape") { if (el.infoDialog.open) el.infoDialog.close(); }
+});
 
 function connectEvents() { const protocol = location.protocol === "https:" ? "wss:" : "ws:", socket = new WebSocket(`${protocol}//${location.host}/api/v1/events`); socket.addEventListener("open", () => { el.connection.textContent = "Host online"; el.connection.classList.add("online"); }); socket.addEventListener("message", event => { try { const message = JSON.parse(event.data); if (message.type === "items.changed") loadItems(); else if (message.type === "tasks.changed") loadTasks(); else if (message.type === "recycle.changed") loadRecycle(); else if (message.type === "reminder.due") toast(`Reminder: ${message.title}`); } catch {} }); socket.addEventListener("close", () => { el.connection.textContent = "Reconnecting"; el.connection.classList.remove("online"); setTimeout(connectEvents, 2000); }); }
 api("/api/v1/system").then(system => { el.storage.textContent = `${formatBytes(system.storage.availableBytes)} free`; }).catch(() => { el.storage.textContent = "Storage unavailable"; }); loadItems(); loadTasks(); loadRecycle(); connectEvents();

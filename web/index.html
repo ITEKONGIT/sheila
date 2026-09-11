@@ -17,6 +17,13 @@
       <button class="nav-item" data-filter="tasks"><span>Tasks</span><b id="task-count">0</b></button>
       <button class="nav-item" data-filter="recycle"><span>Recycle bin</span><b id="recycle-count">0</b></button>
     </nav>
+    <div id="sub-filters" class="sub-filters">
+      <button class="sub-filter active" data-subfilter="all">All</button>
+      <button class="sub-filter" data-subfilter="image">Images</button>
+      <button class="sub-filter" data-subfilter="video">Video</button>
+      <button class="sub-filter" data-subfilter="audio">Audio</button>
+      <button class="sub-filter" data-subfilter="document">Docs</button>
+    </div>
     <div class="sidebar-foot"><span id="connection" class="connection">Connecting</span><small>Private host network</small></div>
   </aside>
   <main>
@@ -66,6 +73,21 @@
     <div class="task-fields"><label>Priority<select id="task-priority"><option value="0">Normal</option><option value="1">Soon</option><option value="2">High</option><option value="3">Urgent</option></select></label><label>Due<input id="task-due" type="datetime-local"></label><label>Remind me<input id="task-reminder" type="datetime-local"></label></div>
     <div class="dialog-actions"><span>Stored on this host</span><button id="save-task" class="button primary" type="submit">Save task</button></div>
   </form>
+</dialog>
+<dialog id="info-dialog">
+  <div class="dialog-head"><div><p class="eyebrow">FILE DETAILS</p><h2 id="info-title">Info</h2></div><button id="close-info" class="icon-button" type="button" aria-label="Close">×</button></div>
+  <div class="info-body">
+    <div id="info-preview" class="info-preview"></div>
+    <dl class="info-grid">
+      <dt>Type</dt><dd id="info-type">—</dd>
+      <dt>Size</dt><dd id="info-size">—</dd>
+      <dt>Format</dt><dd id="info-mime">—</dd>
+      <dt>Checksum</dt><dd id="info-checksum" class="mono">—</dd>
+      <dt>Created</dt><dd id="info-created">—</dd>
+      <dt>Updated</dt><dd id="info-updated">—</dd>
+    </dl>
+    <div class="dialog-actions"><a id="info-download" class="button primary" href="#" download>Download</a></div>
+  </div>
 </dialog>
 <div id="toast" class="toast" role="status"></div><script src="/app.js" defer></script>
 </body>
