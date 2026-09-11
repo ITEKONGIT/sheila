@@ -5,17 +5,23 @@ function formatBytes(bytes){const units=["B","KB","MB","GB","TB"];let value=Numb
 function formatDate(value){if(!value)return"Now";const normalized=value.includes("T")?value:`${value.replace(" ","T")}Z`;return new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}).format(new Date(normalized))}
 function toast(message,isError=false){el.toast.textContent=message;el.toast.classList.toggle("error",isError);el.toast.classList.add("show");clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.toast.classList.remove("show"),2800)}
 async function api(url,options={}){const response=await fetch(url,options);const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload.message||`Request failed (${response.status})`);return payload}
-function icon(item){if(item.type==="note")return"TXT";const extension=item.title.split(".").pop();return extension&&extension!==item.title?extension.slice(0,4):"FILE"}
-function visibleItems(){return state.items.filter(item=>state.filter==="all"||item.type===state.filter)}
+function icon(item){
+  if(item.type==="note")return"TXT";
+  const typeMap={image:"IMG",video:"VID",audio:"AUD",document:"DOC",file:"FILE"};
+  if(typeMap[item.type])return typeMap[item.type];
+  const extension=item.title.split(".").pop();
+  return extension&&extension!==item.title?extension.slice(0,4):"FILE";
+}
+function visibleItems(){return state.items.filter(item=>{if(state.filter==="all")return true;if(state.filter==="note")return item.type==="note";return item.type!=="note"})}
 
 function render(){
-  const items=visibleItems(),notes=state.items.filter(item=>item.type==="note").length,files=state.items.filter(item=>item.type==="file").length;
+  const items=visibleItems(),notes=state.items.filter(item=>item.type==="note").length,files=state.items.filter(item=>item.type!=="note").length;
   document.querySelector("#all-count").textContent=state.items.length;document.querySelector("#file-count").textContent=files;document.querySelector("#note-count").textContent=notes;
   document.querySelector("#item-summary").textContent=`${items.length} item${items.length===1?"":"s"}`;el.items.replaceChildren();
   if(!items.length){const empty=document.createElement("div"),title=document.createElement("strong"),detail=document.createElement("span");empty.className="empty";title.textContent=state.query?"Nothing matched that search":"This space is ready";detail.textContent=state.query?"Try another word or clear the search.":"Send a file or write your first note.";empty.append(title,detail);el.items.append(empty);return}
   for(const item of items){
     const row=document.createElement("button"),badge=document.createElement("span"),body=document.createElement("span"),title=document.createElement("span"),preview=document.createElement("span"),meta=document.createElement("span");
-    row.type="button";row.className="item";row.dataset.id=item.id;badge.className="item-icon";badge.textContent=icon(item);title.className="item-title";title.textContent=item.title;preview.className="item-preview";preview.textContent=item.type==="note"?(item.content||"Empty note"):`${item.mediaType||"File"} · ${formatBytes(item.byteSize)}`;body.append(title,preview);meta.className="item-meta";meta.textContent=`${formatDate(item.updatedAt)}\n${item.type==="note"?"Open note":"Download"}`;meta.style.whiteSpace="pre-line";row.append(badge,body,meta);el.items.append(row)
+    row.type="button";row.className="item";row.dataset.id=item.id;badge.className="item-icon";if(["image","video","audio","document"].includes(item.type))badge.classList.add("type-"+item.type);badge.textContent=icon(item);title.className="item-title";title.textContent=item.title;preview.className="item-preview";preview.textContent=item.type==="note"?(item.content||"Empty note"):`${item.mediaType||"File"} · ${formatBytes(item.byteSize)}`;body.append(title,preview);meta.className="item-meta";meta.textContent=`${formatDate(item.updatedAt)}\n${item.type==="note"?"Open note":"Download"}`;meta.style.whiteSpace="pre-line";row.append(badge,body,meta);el.items.append(row)
   }
 }
 

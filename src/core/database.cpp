@@ -253,22 +253,24 @@ ItemRecord Database::create_file(
     const std::filesystem::path& objectPath,
     std::string mediaType,
     std::uint64_t byteSize,
-    std::string checksum) {
+    std::string checksum,
+    std::string type) {
     const auto id = new_id();
     {
         std::lock_guard lock{mutex_};
         Statement insert{
             handle_,
             "INSERT INTO items(id, type, title, object_path, media_type, byte_size, checksum) "
-            "VALUES (?, 'file', ?, ?, ?, ?, ?);"};
+            "VALUES (?, ?, ?, ?, ?, ?, ?);"};
         bind_text(insert.get(), 1, id);
-        bind_text(insert.get(), 2, title);
-        bind_text(insert.get(), 3, objectPath.string());
-        bind_text(insert.get(), 4, mediaType);
-        if (sqlite3_bind_int64(insert.get(), 5, static_cast<sqlite3_int64>(byteSize)) != SQLITE_OK) {
+        bind_text(insert.get(), 2, type);
+        bind_text(insert.get(), 3, title);
+        bind_text(insert.get(), 4, objectPath.string());
+        bind_text(insert.get(), 5, mediaType);
+        if (sqlite3_bind_int64(insert.get(), 6, static_cast<sqlite3_int64>(byteSize)) != SQLITE_OK) {
             throw std::runtime_error("Could not bind SQLite file size");
         }
-        bind_text(insert.get(), 6, checksum);
+        bind_text(insert.get(), 7, checksum);
         if (sqlite3_step(insert.get()) != SQLITE_DONE) {
             throw std::runtime_error(sqlite3_errmsg(handle_));
         }
