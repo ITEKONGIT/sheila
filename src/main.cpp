@@ -4,6 +4,7 @@
 
 #include <drogon/drogon.h>
 
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -81,10 +82,18 @@ int main(int argc, char* argv[]) {
         }
         std::cout << '\n' << std::flush;
 
+        std::uint64_t maxBodyMiB = 512;
+        if (const auto* env = std::getenv("SSHEILA_MAX_BODY_SIZE_MB")) {
+            const auto value = std::stoull(env);
+            if (value > 0) {
+                maxBodyMiB = value;
+            }
+        }
+
         drogon::app()
             .addListener(options.address, options.port)
             .setUploadPath(layout.uploads.string())
-            .setClientMaxBodySize(32ULL * 1024ULL * 1024ULL)
+            .setClientMaxBodySize(maxBodyMiB * 1024ULL * 1024ULL)
             .setThreadNum(0);
 
         drogon::app().registerPreRoutingAdvice(

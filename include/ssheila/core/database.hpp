@@ -44,7 +44,8 @@ public:
         const std::filesystem::path& objectPath,
         std::string mediaType,
         std::uint64_t byteSize,
-        std::string checksum);
+        std::string checksum,
+        std::string type = "file");
     [[nodiscard]] std::vector<ItemRecord> list_items(std::string_view query = {});
     [[nodiscard]] std::optional<ItemRecord> get_item(std::string_view id);
 

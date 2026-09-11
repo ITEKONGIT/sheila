@@ -29,7 +29,8 @@ Json::Value item_json(const ssheila::core::ItemRecord& item) {
     value["checksum"] = item.checksum;
     value["createdAt"] = item.createdAt;
     value["updatedAt"] = item.updatedAt;
-    if (item.type == "file") {
+    if (item.type == "file" || item.type == "image" || item.type == "video" ||
+        item.type == "audio" || item.type == "document") {
         value["downloadUrl"] = "/api/v1/files/" + item.id;
     }
     return value;
@@ -50,15 +51,93 @@ std::string mime_for_file(const std::filesystem::path& path) {
     std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char character) {
         return static_cast<char>(std::tolower(character));
     });
+
+    // Images
     if (extension == ".png") return "image/png";
     if (extension == ".jpg" || extension == ".jpeg") return "image/jpeg";
     if (extension == ".gif") return "image/gif";
     if (extension == ".webp") return "image/webp";
-    if (extension == ".pdf") return "application/pdf";
-    if (extension == ".txt" || extension == ".md") return "text/plain";
-    if (extension == ".mp3") return "audio/mpeg";
+    if (extension == ".svg") return "image/svg+xml";
+    if (extension == ".bmp") return "image/bmp";
+    if (extension == ".ico") return "image/x-icon";
+    if (extension == ".tiff" || extension == ".tif") return "image/tiff";
+    if (extension == ".avif") return "image/avif";
+
+    // Video
     if (extension == ".mp4") return "video/mp4";
+    if (extension == ".mkv" || extension == ".webm") return "video/webm";
+    if (extension == ".avi") return "video/x-msvideo";
+    if (extension == ".mov") return "video/quicktime";
+    if (extension == ".flv") return "video/x-flv";
+    if (extension == ".wmv") return "video/x-ms-wmv";
+    if (extension == ".m4v") return "video/x-m4v";
+    if (extension == ".3gp") return "video/3gpp";
+    if (extension == ".ts") return "video/mp2t";
+
+    // Audio
+    if (extension == ".mp3") return "audio/mpeg";
+    if (extension == ".wav") return "audio/wav";
+    if (extension == ".ogg") return "audio/ogg";
+    if (extension == ".flac") return "audio/flac";
+    if (extension == ".aac") return "audio/aac";
+    if (extension == ".m4a") return "audio/mp4";
+    if (extension == ".wma") return "audio/x-ms-wma";
+    if (extension == ".opus") return "audio/opus";
+
+    // Documents
+    if (extension == ".pdf") return "application/pdf";
+    if (extension == ".doc") return "application/msword";
+    if (extension == ".docx") return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    if (extension == ".xls" || extension == ".xlsx") return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    if (extension == ".ppt" || extension == ".pptx") return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+    if (extension == ".odt") return "application/vnd.oasis.opendocument.text";
+    if (extension == ".ods") return "application/vnd.oasis.opendocument.spreadsheet";
+    if (extension == ".csv") return "text/csv";
+    if (extension == ".txt" || extension == ".md" || extension == ".log") return "text/plain";
+    if (extension == ".html" || extension == ".htm") return "text/html";
+    if (extension == ".xml") return "text/xml";
+    if (extension == ".json") return "application/json";
+    if (extension == ".yaml" || extension == ".yml") return "application/x-yaml";
+
+    // Archives
+    if (extension == ".zip") return "application/zip";
+    if (extension == ".tar") return "application/x-tar";
+    if (extension == ".gz" || extension == ".tgz") return "application/gzip";
+    if (extension == ".bz2") return "application/x-bzip2";
+    if (extension == ".xz") return "application/x-xz";
+    if (extension == ".7z") return "application/x-7z-compressed";
+    if (extension == ".rar") return "application/vnd.rar";
+
+    // Executables and packages
+    if (extension == ".apk") return "application/vnd.android.package-archive";
+    if (extension == ".deb") return "application/x-debian-package";
+    if (extension == ".rpm") return "application/x-rpm";
+    if (extension == ".exe" || extension == ".msi") return "application/x-msdownload";
+    if (extension == ".dmg") return "application/x-apple-diskimage";
+    if (extension == ".iso") return "application/x-iso9660-image";
+
+    // Fonts
+    if (extension == ".ttf") return "font/ttf";
+    if (extension == ".otf") return "font/otf";
+    if (extension == ".woff") return "font/woff";
+    if (extension == ".woff2") return "font/woff2";
+
     return "application/octet-stream";
+}
+
+std::string item_type_for_mime(const std::string& mime) {
+    if (mime.find("image/") == 0) return "image";
+    if (mime.find("video/") == 0) return "video";
+    if (mime.find("audio/") == 0) return "audio";
+    if (mime.find("text/") == 0) return "document";
+    if (mime == "application/pdf" ||
+        mime.find("application/vnd.") == 0 ||
+        mime.find("application/msword") == 0 ||
+        mime.find("application/x-debian-package") == 0 ||
+        mime.find("application/x-rpm") == 0) {
+        return "document";
+    }
+    return "file";
 }
 
 std::string safe_file_name(std::string_view original) {
@@ -186,12 +265,15 @@ void ItemsController::upload(
             }
 
             try {
+                const auto mediaType = mime_for_file(originalName);
+                const auto itemType = item_type_for_mime(mediaType);
                 const auto item = ssheila::core::Database::active().create_file(
                     originalName,
                     objectPath,
-                    mime_for_file(originalName),
+                    mediaType,
                     file.fileLength(),
-                    file.getMd5());
+                    file.getMd5(),
+                    itemType);
                 body["items"].append(item_json(item));
             } catch (...) {
                 std::filesystem::remove(objectPath);
@@ -214,7 +296,9 @@ void ItemsController::download(
     std::string id) const {
     try {
         const auto item = ssheila::core::Database::active().get_item(id);
-        if (!item || item->type != "file" || !item->objectPath ||
+        if (!item || (item->type != "file" && item->type != "image" && item->type != "video" &&
+                      item->type != "audio" && item->type != "document") ||
+            !item->objectPath ||
             !std::filesystem::is_regular_file(*item->objectPath)) {
             callback(error_response(drogon::k404NotFound, "file_not_found", "The file is unavailable"));
             return;
