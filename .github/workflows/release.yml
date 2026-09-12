@@ -314,3 +314,36 @@ jobs:
         if: env.R2_ACCOUNT_ID != '' && env.R2_ACCESS_KEY_ID != '' && env.R2_SECRET_ACCESS_KEY != '' && env.R2_BUCKET != '' && env.R2_PUBLIC_BASE_URL != ''
         shell: bash
         run: bash scripts/publish-r2.sh release "$RELEASE_TAG"
+
+  pages-release:
+    name: Deploy release site to Cloudflare Pages
+    needs: [github-release, r2-release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check out release site
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Explain skipped Pages deployment
+        if: env.CLOUDFLARE_API_TOKEN == '' || env.CLOUDFLARE_ACCOUNT_ID == ''
+        run: |
+          echo "::warning::Pages deployment skipped. Configure CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to enable it."
+
+      - name: Deploy release site
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+        working-directory: sheila-frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4.131.1 pages deploy . \
+            --project-name ssheila \
+            --branch main \
+            --commit-hash "$GITHUB_SHA" \
+            --commit-message "Release $GITHUB_SHA"

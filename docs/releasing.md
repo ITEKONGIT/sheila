@@ -1,6 +1,6 @@
 # Releasing sSheila
 
-Releases are created by pushing to `main`. Feature branches and pull requests use the normal build/test workflow and cannot publish releases. The main-only workflow builds and tests the Windows and Linux server, creates the platform packages, signs the artifacts with Sigstore keyless signing, and publishes a GitHub Release.
+Releases are created by pushing to `main`. Feature branches and pull requests use the normal build/test workflow and cannot publish releases. The main-only workflow builds and tests the Windows and Linux server, creates the platform packages, signs the artifacts with Sigstore keyless signing, publishes a GitHub Release, updates the private R2 release bucket, and deploys the download site to Cloudflare Pages.
 
 The generated version uses the CMake project major/minor version and the GitHub Actions run number. For example, project version `0.1.0` on run `42` becomes `v0.1.42`. This keeps every main push uniquely releasable without allowing a feature branch to create a release.
 
@@ -16,9 +16,12 @@ R2 publishing is enabled by adding these repository or environment secrets:
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
 - `R2_BUCKET`
-- `R2_PUBLIC_BASE_URL`, such as `https://downloads.example.com`
+- `R2_PUBLIC_BASE_URL`, set to `https://ssheila.pages.dev` for the private Pages/R2 gateway
+- `CLOUDFLARE_API_TOKEN`, with permission to deploy the `ssheila` Pages project
 
-If those secrets are absent, the GitHub Release still publishes and the R2 job reports a warning. Once configured, re-run the workflow for the tag to publish the R2 objects and `latest.json`.
+If those secrets are absent, the GitHub Release still publishes and the Cloudflare jobs report warnings. Once configured, re-run the workflow for the tag to publish the R2 objects, `latest.json`, and the Pages deployment.
+
+The `ssheila-releases` bucket stays private. The release site has an R2 binding named `RELEASES`; its Pages Functions serve `/latest.json` and `/latest/*` directly from that bucket. This gives the public release site access to downloads without enabling the bucket's `r2.dev` URL.
 
 ## R2 layout
 
@@ -33,9 +36,9 @@ latest/SHA256SUMS
 latest.json
 ```
 
-The frontend should fetch `${R2_PUBLIC_BASE_URL}/latest.json` and use the `platforms.windows-x64.url` or `platforms.linux-x64.url` value. It should not scrape GitHub Releases or enumerate the R2 bucket.
+The frontend fetches `${R2_PUBLIC_BASE_URL}/latest.json` and uses the `platforms.windows-x64.url` or `platforms.linux-x64.url` value. It does not scrape GitHub Releases or enumerate the R2 bucket.
 
-The public R2 domain must allow `GET` and `HEAD` from the release-site origin if the frontend fetches `latest.json` with JavaScript. Direct download links do not require CORS, but the manifest request does.
+The default Pages/R2 gateway is same-origin and does not need CORS. If a separate frontend domain reads R2 directly later, apply the policy in `docs/r2-cors.json` after replacing its placeholder origin.
 
 ## Verifying a release
 

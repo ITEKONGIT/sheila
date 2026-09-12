@@ -11,3 +11,5 @@
 *.log
 .DS_Store
 Thumbs.db
+/release-site-standalone-git-backup/
+/sheila-frontend/

@@ -136,7 +136,7 @@ The script configures the same C++20/Drogon engine, builds it, and runs the test
 
 ## Automated releases
 
-Pushing to `main` runs the GitHub release workflow. Feature branches and pull requests remain test-only. The workflow builds and tests Windows and Linux packages, signs the artifacts with Sigstore, and publishes them as a GitHub Release. When the R2 secrets are configured, it also updates the versioned objects and signed `latest.json` manifest used by the release frontend.
+Pushing to `main` runs the GitHub release workflow. Feature branches and pull requests remain test-only. The workflow builds and tests Windows and Linux packages, signs the artifacts with Sigstore, and publishes them as a GitHub Release. When the Cloudflare secrets are configured, it also updates the private R2 release bucket and deploys the Pages download site at `https://ssheila.pages.dev`.
 
 Release setup, R2 configuration, and verification commands are documented in [docs/releasing.md](docs/releasing.md).
 
