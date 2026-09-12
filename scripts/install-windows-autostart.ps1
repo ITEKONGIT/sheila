@@ -82,4 +82,4 @@ if (-not $ready) {
 
 Write-Host "sSheila autostart is installed and running."
 Write-Host "Data will continue from: $resolvedDataDirectory"
-Write-Host "Open: http://127.0.0.1:$Port"
+Write-Host "Open: http://sheila.local:$Port"

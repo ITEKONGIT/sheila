@@ -53,7 +53,17 @@ SQLite stores item metadata, note content, checksums, timestamps, and the FTS5 i
 
 The server binds to `0.0.0.0` so other devices can connect. At startup, the engine discovers active host IPv4 interfaces and their masks. Pre-routing advice checks the socket peer address against those subnets; localhost and matching subnet addresses continue, while other sources receive `403 Forbidden`.
 
-Forwarding headers are not trusted for this decision. Windows Firewall is separately restricted to the executable, TCP port `18877`, and `LocalSubnet` remote addresses.
+The engine also advertises `sheila.local` on IPv4 mDNS (`224.0.0.251:5353`) for
+each discovered interface address. Clients on the directly connected subnet
+can therefore resolve the canonical hostname without a hosts-file change or a
+separate DNS service. Interface and subnet discovery refreshes while the
+process runs, allowing a host that changes Wi-Fi networks to keep the same
+hostname while withdrawing the old HTTP access boundary and mDNS interface
+set. The responder is built into the executable so Windows and Linux use the
+same discovery behavior; installation only needs to permit UDP `5353` from the
+local subnet in the host firewall.
+
+Forwarding headers are not trusted for this decision. Windows Firewall is separately restricted to the executable, TCP port `18877`, and `LocalSubnet` remote addresses; the mDNS rule similarly limits UDP `5353` discovery traffic to `LocalSubnet`.
 
 This is defense in depth, not user identity. Authentication, pairing, authorization, and TLS must be added before treating an untrusted network as safe.
 

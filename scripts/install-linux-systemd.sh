@@ -63,6 +63,14 @@ systemctl daemon-reload
 systemctl enable ssheila.service
 systemctl restart ssheila.service
 
+configured_port=18877
+if [ -r /etc/default/ssheila ]; then
+    # The defaults file contains shell-compatible assignments and is already
+    # the service's supported administrator override mechanism.
+    . /etc/default/ssheila
+    configured_port=${SSHEILA_PORT:-$configured_port}
+fi
+
 attempt=0
 service_state=activating
 while [ "$attempt" -lt 10 ]; do
@@ -85,5 +93,7 @@ fi
 
 printf '%s\n' 'sSheila is installed, enabled at boot, and running as the ssheila system user.'
 printf '%s\n' 'Workspace data: /var/lib/ssheila'
+printf 'Open from the host subnet: http://sheila.local:%s\n' "$configured_port"
+printf '%s\n' 'mDNS discovery uses UDP port 5353; allow it from the local subnet in the host firewall if one is enabled.'
 printf '%s\n' 'Service status: systemctl status ssheila'
 printf '%s\n' 'Live logs: journalctl -u ssheila -f'

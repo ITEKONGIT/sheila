@@ -12,6 +12,8 @@ option(SSHEILA_BUILD_SERVER "Build the Drogon web server" ON)
 
 add_library(ssheila_core
     src/core/local_subnet_access.cpp
+    src/core/mdns_responder.cpp
+    src/core/network_change_monitor.cpp
     src/core/storage_layout.cpp
 )
 
@@ -115,6 +117,12 @@ if(BUILD_TESTING)
     target_link_libraries(local_subnet_access_test PRIVATE ssheila_core)
     add_test(NAME local_subnet_access COMMAND local_subnet_access_test)
     set_tests_properties(local_subnet_access PROPERTIES TIMEOUT 60)
+
+    add_executable(mdns_responder_test tests/mdns_responder_test.cpp)
+    target_link_libraries(mdns_responder_test PRIVATE ssheila_core)
+    target_compile_features(mdns_responder_test PRIVATE cxx_std_20)
+    add_test(NAME mdns_responder COMMAND mdns_responder_test)
+    set_tests_properties(mdns_responder PROPERTIES TIMEOUT 60)
 
     add_executable(database_test tests/database_test.cpp src/core/database.cpp)
     target_include_directories(database_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

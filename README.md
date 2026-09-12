@@ -18,6 +18,7 @@ Upload something from one device, retrieve it from another, or leave yourself a 
 - Automatic storage initialization on first run
 - Resume from the same database and object store after restart
 - Host-subnet access enforcement before HTTP routing
+- Automatic `sheila.local` hostname discovery across the host subnet
 - Windows autostart and restart-after-failure tooling
 - Linux `systemd` service with boot startup, restart-on-failure, and process isolation
 - Shared C++ core designed to compile on Windows and Linux
@@ -71,6 +72,22 @@ Other devices use the LAN address printed at startup, for example:
 ```text
 http://192.168.0.3:18877
 ```
+
+Devices on the same directly connected subnet can also use the canonical
+address:
+
+```text
+http://sheila.local:18877
+```
+
+sSheila advertises `sheila.local` with IPv4 mDNS on UDP port `5353`, using all
+active host-subnet addresses. It refreshes the interface list while running,
+so moving the host to another Wi-Fi network keeps the same hostname and drops
+the old network automatically. The application still checks each HTTP peer
+against the host's discovered subnets, so the hostname is a convenient route
+to the host and does not change the existing trust boundary. Windows' startup
+installer opens UDP `5353` from `LocalSubnet`; on Linux, allow UDP `5353` from
+the local subnet in the distribution's firewall when one is enabled.
 
 Without arguments, Windows data is created under `%LOCALAPPDATA%\sSheila`. A different durable location can be selected explicitly:
 
@@ -161,7 +178,7 @@ journalctl -u ssheila -f
 sudo systemctl restart ssheila
 ```
 
-After installation, browse to `http://<linux-host-ip>:18877` from a device on the same subnet. The application-level subnet gate remains active. Linux firewalls differ by distribution, so allow TCP port `18877` only from the local subnet when the host firewall is enabled.
+After installation, browse to `http://sheila.local:18877` from a device on the same subnet. The application-level subnet gate remains active. Linux firewalls differ by distribution, so allow TCP port `18877` and UDP port `5353` from the local subnet when the host firewall is enabled.
 
 To remove the service and executable while preserving all data:
 
