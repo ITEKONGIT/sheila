@@ -40,18 +40,33 @@ function mediaKind(item) {
   return null;
 }
 
+function documentKind(item) {
+  if (item.type === "document") return "document";
+  const mime = item.mediaType || "";
+  if (mime.startsWith("text/") || mime.startsWith("application/vnd.") || mime === "application/pdf" ||
+      mime === "application/msword" || mime === "application/rtf" || mime.includes("officedocument") ||
+      mime.includes("opendocument")) return "document";
+  return null;
+}
+
+function contentKind(item) {
+  return item.type === "note" ? "note" : (mediaKind(item) || documentKind(item) || "file");
+}
+
 function visibleItems() {
   return state.items.filter(item => {
-    if (state.filter === "note") return item.type === "note";
-    if (state.subfilter !== "all") return item.type === state.subfilter;
+    const kind = contentKind(item);
+    if (state.filter === "note") return kind === "note";
+    if (state.subfilter !== "all") return kind === state.subfilter;
     if (state.filter === "all") return true;
-    return item.type !== "note";
+    return kind !== "note";
   });
 }
 
 function render() {
-  const items = visibleItems(), notes = state.items.filter(item => item.type === "note").length, files = state.items.filter(item => item.type !== "note").length;
+  const items = visibleItems(), notes = state.items.filter(item => contentKind(item) === "note").length, files = state.items.filter(item => contentKind(item) !== "note").length;
   document.querySelector("#all-count").textContent = state.items.length; document.querySelector("#file-count").textContent = files; document.querySelector("#note-count").textContent = notes;
+  document.querySelectorAll("[data-subfilter-count]").forEach(count => { const filter = count.dataset.subfilterCount; count.textContent = filter === "all" ? state.items.length : state.items.filter(item => contentKind(item) === filter).length; });
   document.querySelector("#item-summary").textContent = `${items.length} item${items.length === 1 ? "" : "s"}`; el.items.replaceChildren();
   if (!items.length) { const empty = document.createElement("div"), title = document.createElement("strong"), detail = document.createElement("span"); empty.className = "empty"; title.textContent = state.query ? "Nothing matched that search" : "This space is ready"; detail.textContent = state.query ? "Try another word or clear the search." : "Send a file or write your first note."; empty.append(title, detail); el.items.append(empty); return; }
   for (const item of items) {
