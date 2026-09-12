@@ -1,3 +1,3 @@
-// Set this to the public R2 origin in a deployed release site, for example:
-// window.SSHEILA_RELEASE_BASE_URL = 'https://downloads.example.com';
-window.SSHEILA_RELEASE_BASE_URL = '';
+// The Pxxl frontend reads release metadata and downloads through the private
+// Cloudflare Pages-to-R2 gateway.
+window.SSHEILA_RELEASE_BASE_URL = 'https://ssheila.pages.dev';
