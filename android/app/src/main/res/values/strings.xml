@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Sheila Intelligence Node</string>
+    <string name="node_channel_name">Sheila node</string>
+    <string name="node_notification_title">Sheila Intelligence Node</string>
+</resources>

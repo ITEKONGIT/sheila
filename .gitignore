@@ -13,3 +13,12 @@
 Thumbs.db
 /release-site-standalone-git-backup/
 /sheila-frontend/
+
+# Android build outputs and local SDK state
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/local.properties
+/android/.idea/
+*.jks
+*.keystore
