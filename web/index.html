@@ -15,7 +15,7 @@
       <button class="nav-item" data-filter="file"><span>Files</span><b id="file-count">0</b></button>
       <button class="nav-item" data-filter="note"><span>Notes</span><b id="note-count">0</b></button>
       <button class="nav-item" data-filter="tasks"><span>Tasks</span><b id="task-count">0</b></button>
-      <button class="nav-item" data-filter="recycle"><span>Recycle bin</span><b id="recycle-count">0</b></button>
+      <a class="nav-item" href="/recycle-bin"><span>Recycle bin</span></a>
     </nav>
     <div id="sub-filters" class="sub-filters">
       <button class="sub-filter active" data-subfilter="all">All</button>
@@ -36,7 +36,6 @@
       <label id="drop-zone" class="drop-zone"><input id="file-input" type="file" multiple hidden><span class="drop-icon">↑</span><span><strong>Drop files here</strong><small>or choose files from this device</small></span><span id="upload-progress" class="upload-progress"></span></label>
       <section id="items" class="items" aria-live="polite"><div class="loading">Loading your host…</div></section>
       <section id="tasks-panel" class="panel" hidden aria-live="polite"></section>
-      <section id="recycle-panel" class="panel" hidden aria-live="polite"></section>
     </section>
   </main>
 </div>
