@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "tag": "local",
+  "version": "local",
+  "published_at": "2026-09-12T00:00:00Z",
+  "github_release_url": "https://github.com/ITEKONGIT/sheila/releases",
+  "checksums_url": "",
+  "platforms": {
+    "windows-x64": {
+      "name": "sSheila.exe",
+      "url": "/downloads/sSheila.exe",
+      "size_bytes": 10046532,
+      "sha256": ""
+    }
+  }
+}
