@@ -2,6 +2,8 @@ name: Build
 
 on:
   push:
+    branches-ignore:
+      - main
   pull_request:
 
 jobs:
@@ -46,7 +48,8 @@ jobs:
         run: cmake --build build/ci --parallel
 
       - name: Test
-        run: ctest --test-dir build/ci --output-on-failure
+        timeout-minutes: 5
+        run: ctest --test-dir build/ci --output-on-failure --timeout 60
 
       - name: Validate Linux service packaging
         if: runner.os == 'Linux'

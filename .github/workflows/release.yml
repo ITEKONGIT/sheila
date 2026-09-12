@@ -7,7 +7,7 @@ on:
 
 concurrency:
   group: release-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -135,7 +135,8 @@ jobs:
 
       - name: Test
         shell: bash
-        run: ctest --test-dir build/release --output-on-failure
+        timeout-minutes: 5
+        run: ctest --test-dir build/release --output-on-failure --timeout 60
 
       - name: Package Windows executable
         if: runner.os == 'Windows'
