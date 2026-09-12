@@ -63,7 +63,7 @@ jobs:
       contents: read
     env:
       RELEASE_TAG: ${{ needs.metadata.outputs.tag }}
-      VCPKG_ROOT: ${{ runner.temp }}/vcpkg
+      VCPKG_ROOT: ${{ github.workspace }}/.tools/vcpkg
 
     steps:
       - name: Check out main commit
