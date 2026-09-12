@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0e100d"><title>Recycle bin · sSheila</title>
+  <link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="recycle-shell">
+  <header class="recycle-topbar"><a class="back-link" href="/">← Back to sSheila</a><span id="connection" class="connection">Connecting</span></header>
+  <main class="recycle-content">
+    <div class="heading"><div><p class="eyebrow">RECOVERABLE</p><h1>Recycle bin</h1><p>Deleted notes, files, and tasks stay here until you restore or remove them forever.</p></div><span id="item-summary" class="item-summary">0 items</span></div>
+    <div id="recycle-list" class="recycle-list" aria-live="polite"><div class="loading">Loading the recycle bin…</div></div>
+  </main>
+</div>
+<div id="toast" class="toast" role="status"></div><script src="/recycle-bin.js" defer></script>
+</body>
+</html>

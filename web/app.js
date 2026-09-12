@@ -18,6 +18,15 @@ const el = {
   infoPreview: document.querySelector("#info-preview"), infoDownload: document.querySelector("#info-download")
 };
 
+// Recycle bin is a dedicated page, not an inline inbox filter. Register this
+// before the general navigation handler so it cannot fall through to the old
+// panel renderer.
+document.querySelector('[data-filter="recycle"]').addEventListener("click", event => {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  window.location.assign("/recycle-bin");
+});
+
 function formatBytes(bytes) { const units = ["B", "KB", "MB", "GB", "TB"]; let value = Number(bytes || 0), unit = 0; while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; } return `${value.toFixed(unit < 2 ? 0 : 1)} ${units[unit]}`; }
 function formatDate(value) { if (!value) return "Now"; const normalized = value.includes("T") ? value : `${value.replace(" ", "T")}Z`; return new Intl.DateTimeFormat(undefined, {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}).format(new Date(normalized)); }
 function toast(message, isError = false) { el.toast.innerHTML = ""; const text = document.createTextNode(message); el.toast.appendChild(text); el.toast.classList.toggle("error", isError); el.toast.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => el.toast.classList.remove("show"), 2800); }

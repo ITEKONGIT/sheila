@@ -53,8 +53,10 @@ endif()
 if(SSHEILA_BUILD_SERVER)
     set(SSHEILA_WEB_ASSETS
         ${CMAKE_CURRENT_SOURCE_DIR}/web/index.html
+        ${CMAKE_CURRENT_SOURCE_DIR}/web/recycle-bin.html
         ${CMAKE_CURRENT_SOURCE_DIR}/web/styles.css
         ${CMAKE_CURRENT_SOURCE_DIR}/web/app.js
+        ${CMAKE_CURRENT_SOURCE_DIR}/web/recycle-bin.js
         ${CMAKE_CURRENT_SOURCE_DIR}/web/manifest.webmanifest
         ${CMAKE_CURRENT_SOURCE_DIR}/web/favicon.svg
     )

@@ -13,6 +13,18 @@ void EmbeddedWebController::index(
     send(request->path() == "/index.html" ? "/index.html" : "/", std::move(callback));
 }
 
+void EmbeddedWebController::recycleBin(
+    const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
+    send("/recycle-bin", std::move(callback));
+}
+
+void EmbeddedWebController::recycleBinScript(
+    const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
+    send("/recycle-bin.js", std::move(callback));
+}
+
 void EmbeddedWebController::styles(
     const drogon::HttpRequestPtr&,
     std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {

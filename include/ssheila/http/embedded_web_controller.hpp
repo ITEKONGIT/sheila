@@ -9,6 +9,8 @@ public:
     METHOD_LIST_BEGIN
     ADD_METHOD_TO(EmbeddedWebController::index, "/", drogon::Get);
     ADD_METHOD_TO(EmbeddedWebController::index, "/index.html", drogon::Get);
+    ADD_METHOD_TO(EmbeddedWebController::recycleBin, "/recycle-bin", drogon::Get);
+    ADD_METHOD_TO(EmbeddedWebController::recycleBinScript, "/recycle-bin.js", drogon::Get);
     ADD_METHOD_TO(EmbeddedWebController::styles, "/styles.css", drogon::Get);
     ADD_METHOD_TO(EmbeddedWebController::application, "/app.js", drogon::Get);
     ADD_METHOD_TO(EmbeddedWebController::manifest, "/manifest.webmanifest", drogon::Get);
@@ -17,6 +19,10 @@ public:
 
     void index(const drogon::HttpRequestPtr& request,
                std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
+    void recycleBin(const drogon::HttpRequestPtr& request,
+                    std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
+    void recycleBinScript(const drogon::HttpRequestPtr& request,
+                          std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
     void styles(const drogon::HttpRequestPtr& request,
                 std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
     void application(const drogon::HttpRequestPtr& request,
