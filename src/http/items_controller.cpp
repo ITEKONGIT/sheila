@@ -153,18 +153,32 @@ std::string safe_file_name(std::string_view original) {
 template <typename RequestPtr>
 drogon::HttpResponsePtr file_download_response(
     const std::string& path, const std::string& title, const RequestPtr& request) {
+    drogon::HttpResponsePtr response;
     if constexpr (requires {
                       drogon::HttpResponse::newFileResponse(
                           path, title, drogon::CT_NONE, "", request);
                   }) {
-        return drogon::HttpResponse::newFileResponse(
+        response = drogon::HttpResponse::newFileResponse(
             path, title, drogon::CT_NONE, "", request);
     } else {
         // Drogon 1.9.0, shipped by current Debian/Parrot releases, predates
         // request-aware range handling on this factory overload.
         (void)request;
-        return drogon::HttpResponse::newFileResponse(path, title, drogon::CT_NONE, "");
+        response = drogon::HttpResponse::newFileResponse(path, title, drogon::CT_NONE, "");
     }
+    const auto ext = std::filesystem::path(path).extension().string();
+    const auto lower = [&]() {
+        std::string s = ext;
+        std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
+        return s;
+    }();
+    if (lower == ".pdf" || lower == ".txt" || lower == ".md" || lower == ".json" ||
+        lower == ".csv" || lower == ".xml" || lower == ".html" || lower == ".svg") {
+        response->addHeader("Content-Disposition", "inline; filename=\"" + title + "\"");
+    } else {
+        response->addHeader("Content-Disposition", "attachment; filename=\"" + title + "\"");
+    }
+    return response;
 }
 
 }  // namespace
