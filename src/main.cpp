@@ -4,6 +4,7 @@
 #include "ssheila/http/events_websocket.hpp"
 
 #include <drogon/drogon.h>
+#include <trantor/utils/Logger.h>
 
 #include <cstdlib>
 #include <filesystem>
@@ -112,7 +113,8 @@ int main(int argc, char* argv[]) {
             .addListener(options.address, options.port)
             .setUploadPath(layout.uploads.string())
             .setClientMaxBodySize(max_body_size_bytes())
-            .setThreadNum(0);
+            .setThreadNum(0)
+            .setLogLevel(trantor::Logger::kWarn);
 
         drogon::app().registerPreRoutingAdvice(
             [subnetAccess](const drogon::HttpRequestPtr& request,

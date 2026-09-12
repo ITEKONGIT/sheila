@@ -330,4 +330,26 @@ void ItemsController::trash(
     }
 }
 
+void ItemsController::restoreItem(
+    const drogon::HttpRequestPtr&,
+    std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+    std::string id) const {
+    try {
+        if (id.empty()) {
+            callback(error_response(drogon::k400BadRequest, "invalid_id", "Item ID is required"));
+            return;
+        }
+        if (ssheila::core::Database::active().restore_item(id)) {
+            auto response = drogon::HttpResponse::newHttpJsonResponse(Json::Value{});
+            response->setStatusCode(drogon::k200OK);
+            callback(response);
+            EventsWebSocket::publish(R"({"type":"items.changed"})");
+        } else {
+            callback(error_response(drogon::k404NotFound, "item_not_found", "The item does not exist or is not deleted"));
+        }
+    } catch (const std::exception& error) {
+        callback(error_response(drogon::k500InternalServerError, "restore_failed", error.what()));
+    }
+}
+
 }  // namespace ssheila::http

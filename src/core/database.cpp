@@ -409,16 +409,6 @@ bool Database::trash_item(std::string_view id) {
     return sqlite3_changes(handle_) != 0;
 }
 
-bool Database::restore_item(std::string_view id) {
-    std::lock_guard lock{mutex_};
-    Statement statement{handle_, "UPDATE items SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL;"};
-    bind_text(statement.get(), 1, id);
-    if (sqlite3_step(statement.get()) != SQLITE_DONE) {
-        throw std::runtime_error(sqlite3_errmsg(handle_));
-    }
-    return sqlite3_changes(handle_) != 0;
-}
-
 std::optional<ItemRecord> Database::purge_item(std::string_view id) {
     std::lock_guard lock{mutex_};
     std::optional<ItemRecord> item;
@@ -619,6 +609,19 @@ bool Database::purge_task(std::string_view id) {
         throw std::runtime_error(sqlite3_errmsg(handle_));
     }
     return sqlite3_changes(handle_) != 0;
+}
+
+bool Database::restore_item(std::string_view id) {
+    std::lock_guard lock{mutex_};
+    Statement update{
+        handle_,
+        "UPDATE items SET deleted_at = NULL, updated_at = CURRENT_TIMESTAMP "
+        "WHERE id = ? AND deleted_at IS NOT NULL;"};
+    bind_text(update.get(), 1, id);
+    if (sqlite3_step(update.get()) != SQLITE_DONE) {
+        throw std::runtime_error(sqlite3_errmsg(handle_));
+    }
+    return sqlite3_changes(handle_) > 0;
 }
 
 void Database::set_active(Database& database) {

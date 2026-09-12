@@ -13,6 +13,7 @@ public:
     ADD_METHOD_TO(ItemsController::upload, "/api/v1/files", drogon::Post);
     ADD_METHOD_TO(ItemsController::download, "/api/v1/files/{1}", drogon::Get);
     ADD_METHOD_TO(ItemsController::trash, "/api/v1/items/{1}", drogon::Delete);
+    ADD_METHOD_TO(ItemsController::restoreItem, "/api/v1/items/{1}/restore", drogon::Post);
     METHOD_LIST_END
 
     void list(const drogon::HttpRequestPtr& request,
@@ -30,6 +31,9 @@ public:
     void trash(const drogon::HttpRequestPtr& request,
                std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                std::string id) const;
+    void restoreItem(const drogon::HttpRequestPtr& request,
+                     std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+                     std::string id) const;
 };
 
 }  // namespace ssheila::http
