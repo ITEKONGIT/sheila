@@ -21,7 +21,7 @@ R2 publishing is enabled by adding these repository or environment secrets:
 
 If those secrets are absent, the GitHub Release still publishes and the Cloudflare jobs report warnings. Once configured, re-run the workflow for the tag to publish the R2 objects, `latest.json`, and the Pages deployment.
 
-The `ssheila-releases` bucket stays private. The release site has an R2 binding named `RELEASES`; its Pages Functions serve `/latest.json` and `/latest/*` directly from that bucket. This gives the public release site access to downloads without enabling the bucket's `r2.dev` URL.
+The `ssheila-releases` bucket stays private. The Pages gateway checks out `ITEKONGIT/sheila-frontend`, binds R2 as `RELEASES`, and serves `/latest.json` plus `/latest/*` directly from the bucket. The public frontend at `https://sheila.pxxlspace.cv` reads that gateway through an origin-restricted CORS policy, without enabling the bucket's `r2.dev` URL.
 
 ## R2 layout
 
