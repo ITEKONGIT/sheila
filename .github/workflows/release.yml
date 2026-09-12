@@ -324,14 +324,24 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      FRONTEND_REPO_TOKEN: ${{ secrets.FRONTEND_REPO_TOKEN }}
     steps:
+      - name: Validate private frontend access token
+        if: env.FRONTEND_REPO_TOKEN == ''
+        shell: bash
+        run: |
+          echo "::error::FRONTEND_REPO_TOKEN must have read-only Contents access to ITEKONGIT/sheila-frontend."
+          exit 1
+
       - name: Check out release site
+        if: env.FRONTEND_REPO_TOKEN != ''
         uses: actions/checkout@v4
         with:
           repository: ITEKONGIT/sheila-frontend
           ref: main
           path: sheila-frontend
           fetch-depth: 1
+          token: ${{ env.FRONTEND_REPO_TOKEN }}
 
       - name: Explain skipped Pages deployment
         if: env.CLOUDFLARE_API_TOKEN == '' || env.CLOUDFLARE_ACCOUNT_ID == ''
